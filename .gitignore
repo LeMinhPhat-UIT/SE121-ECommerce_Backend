@@ -61,6 +61,3 @@ nunit-*.xml
 bin/*
 obj/*
 *.user
-
-.env
-/ECommerceApp/.vs/*
