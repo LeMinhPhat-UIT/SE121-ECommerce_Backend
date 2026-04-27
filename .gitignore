@@ -61,3 +61,7 @@ nunit-*.xml
 bin/*
 obj/*
 *.user
+
+.env
+/ECommerceApp/.vs/ECommerceApp.slnx
+/ECommerceApp/.vs/ProjectEvaluation
