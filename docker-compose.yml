@@ -1,0 +1,41 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ecommerce-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      MSSQL_PID: ${MSSQL_PID}
+    ports:
+      - "${MSSQL_PORT}:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+
+  ecommerceapp:
+    build:
+      context: ./ECommerceApp
+      dockerfile: Dockerfile
+    container_name: ecommerce-app
+    depends_on:
+      - sqlserver
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ASPNETCORE_URLS: ${ASPNETCORE_URLS}
+      ConnectionStrings__EFCoreDBConnection: ${CONNECTIONSTRINGS__EFCOREDBCONNECTION}
+      Jwt__Issuer: ${JWT__ISSUER}
+      Jwt__Audience: ${JWT__AUDIENCE}
+      Jwt__Key: ${JWT__KEY}
+      Jwt__AccessTokenMinutes: ${JWT__ACCESSTOKENMINUTES}
+      Jwt__AdminEmails: ${JWT__ADMINEMAILS}
+      EmailSettings__MailServer: ${EMAILSETTINGS__MAILSERVER}
+      EmailSettings__MailPort: ${EMAILSETTINGS__MAILPORT}
+      EmailSettings__SenderName: ${EMAILSETTINGS__SENDERNAME}
+      EmailSettings__FromEmail: ${EMAILSETTINGS__FROMEMAIL}
+      EmailSettings__Password: ${EMAILSETTINGS__PASSWORD}
+    ports:
+      - "${APP_PORT}:8080"
+
+volumes:
+  sqlserver-data:

@@ -56,10 +56,8 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
+/ECommerceApp/.vs/*
 .vs/*
 bin/*
 obj/*
 *.user
-
-.env
-/ECommerceApp/.vs/ECommerceApp.slnx
