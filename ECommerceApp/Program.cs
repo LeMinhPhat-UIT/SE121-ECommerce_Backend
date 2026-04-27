@@ -1,6 +1,7 @@
 using ECommerceApp.Data;
 using ECommerceApp.Repositories.Implements;
 using ECommerceApp.Repositories.Interfaces;
+using ECommerceApp.Services;
 using ECommerceApp.Services.Implements;
 using ECommerceApp.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -35,9 +36,11 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 builder.Services.AddScoped<IAddressRepository, AddressRepository>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IAddressService, AddressService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
 
 var app = builder.Build();
 
