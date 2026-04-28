@@ -1,6 +1,7 @@
 using ECommerceApp.Data;
 using ECommerceApp.Repositories.Implements;
 using ECommerceApp.Repositories.Interfaces;
+using ECommerceApp.Services;
 using ECommerceApp.Services.Implements;
 using ECommerceApp.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
