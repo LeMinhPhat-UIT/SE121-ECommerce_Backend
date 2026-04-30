@@ -8,6 +8,16 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using ECommerceApp.Mappings.Addresses;
+using ECommerceApp.Mappings.Cancellations;
+using ECommerceApp.Mappings.Carts;
+using ECommerceApp.Mappings.Categories;
+using ECommerceApp.Mappings.Customers;
+using ECommerceApp.Mappings.Feedbacks;
+using ECommerceApp.Mappings.Orders;
+using ECommerceApp.Mappings.Payments;
+using ECommerceApp.Mappings.Products;
+using ECommerceApp.Mappings.Refunds;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +56,17 @@ builder.Services.AddScoped<IAddressService, AddressService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IShoppingCartService, ShoppingCartService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+
+builder.Services.AddScoped<IAddressMapper, AddressMapper>();
+builder.Services.AddScoped<IProductMapper, ProductMapper>();
+builder.Services.AddScoped<ICategoryMapper, CategoryMapper>();
+builder.Services.AddScoped<ICustomerMapper, CustomerMapper>();
+builder.Services.AddScoped<IOrderMapper, OrderMapper>();
+builder.Services.AddScoped<ICartMapper, CartMapper>();
+builder.Services.AddScoped<IFeedbackMapper, FeedbackMapper>();
+builder.Services.AddScoped<ICancellationMapper, CancellationMapper>();
+builder.Services.AddScoped<IRefundMapper, RefundMapper>();
+builder.Services.AddScoped<IPaymentMapper, PaymentMapper>();
 
 var app = builder.Build();
 
