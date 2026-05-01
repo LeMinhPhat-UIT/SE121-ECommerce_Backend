@@ -104,6 +104,13 @@ public class OrderRepository(ApplicationDbContext context) : IOrderRepository
             .FirstOrDefaultAsync(o => o.Id == orderId);
     }
 
+    public async Task<Order?> GetByIdAndCustomerIdAsync(int orderId, int customerId, bool trackChanges = false)
+    {
+        var query = context.Orders.AsQueryable();
+        if (!trackChanges) query = query.AsNoTracking();
+
+        return await query.FirstOrDefaultAsync(o => o.Id == orderId && o.CustomerId == customerId);
+    }
     
     public void Add(Order order)
     {

@@ -6,12 +6,12 @@ namespace ECommerceApp.Mappings.Cancellations
 {
     public interface ICancellationMapper
     {
-        CancellationResponseDTO Map(Cancellation source);
+        CancellationResponse Map(Cancellation source);
     }
 
     [Mapper]
     public partial class CancellationMapper : ICancellationMapper
     {
-        public partial CancellationResponseDTO Map(Cancellation source);
+        public partial CancellationResponse Map(Cancellation source);
     }
 }

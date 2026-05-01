@@ -2,7 +2,7 @@
 
 namespace ECommerceApp.DTOs.CancellationDTOs
 {
-    public class CancellationResponseDTO
+    public class CancellationResponse
     {
         public int Id { get; set; }
         public int OrderId { get; set; }
