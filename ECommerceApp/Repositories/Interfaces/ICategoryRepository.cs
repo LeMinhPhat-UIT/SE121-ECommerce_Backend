@@ -6,9 +6,9 @@ namespace ECommerceApp.Repositories.Interfaces
     {
         Task<bool> ExistsByNameAsync(string name, int? excludeCategoryId = null);
         Task<bool> ExistsByIdAsync(int id);
-        Task<Category?> GetByIdAsync(int id);
+        Task<Category?> GetByIdAsync(int id, bool trackChanges = false);
         Task<List<Category>> GetAllAsync();
-        Task AddAsync(Category category);
-        Task UpdateAsync(Category category);
+        void Add(Category category);
+        void Update(Category category);
     }
 }
