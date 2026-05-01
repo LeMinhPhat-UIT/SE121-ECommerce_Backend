@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore.Storage;
+
 namespace ECommerceApp.Repositories.Interfaces;
 
 public interface IUnitOfWork : IDisposable
@@ -8,6 +10,11 @@ public interface IUnitOfWork : IDisposable
     IProductRepository ProductRepository { get; }
     ICartRepository CartRepository { get; }
     ICartItemRepository CartItemRepository { get; }
+    IOrderRepository OrderRepository { get; }
     
     Task<int> SaveChangesAsync();
+    
+    Task<IDbContextTransaction> BeginTransactionAsync();
+    Task CommitTransactionAsync();
+    Task RollbackTransactionAsync();
 }
