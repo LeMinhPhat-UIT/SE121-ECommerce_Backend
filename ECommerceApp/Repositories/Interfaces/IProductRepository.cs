@@ -6,9 +6,12 @@ namespace ECommerceApp.Repositories.Interfaces
     {
         Task<bool> ExistsByNameAsync(string name, int? excludeProductId = null);
         Task<Product?> GetByIdAsync(int id, bool trackChanges = false);
+        Task<List<Product>> GetByIdsAsync(IEnumerable<int> ids, bool trackChanges = false);
         Task<List<Product>> GetAllAsync();
         Task<List<Product>> GetByCategoryAsync(int categoryId);
         void Add(Product product);
         void Update(Product product);
+        
+        Task<bool> DeductStockAsync(int productId, int quantity);
     }
 }
