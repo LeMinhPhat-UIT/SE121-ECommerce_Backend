@@ -8,13 +8,17 @@ public class UnitOfWork(
         IAddressRepository addressRepo,
         ICustomerRepository customerRepo,
         ICategoryRepository categoryRepo,
-        IProductRepository productRepo
+        IProductRepository productRepo,
+        ICartRepository cartRepo,
+        ICartItemRepository cartItemRepo
     ) : IUnitOfWork
 {
     public IAddressRepository AddressRepository => addressRepo;
     public ICustomerRepository CustomerRepository => customerRepo;
     public ICategoryRepository CategoryRepository => categoryRepo;
     public IProductRepository ProductRepository => productRepo;
+    public ICartRepository CartRepository => cartRepo;
+    public ICartItemRepository CartItemRepository => cartItemRepo;
     
     public async Task<int> SaveChangesAsync()
     {

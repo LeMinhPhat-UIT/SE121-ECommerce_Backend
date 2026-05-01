@@ -4,37 +4,26 @@ using ECommerceApp.Repositories.Interfaces;
 
 namespace ECommerceApp.Repositories.Implements
 {
-    public class CartItemRepository : ICartItemRepository
+    public class CartItemRepository(ApplicationDbContext context) : ICartItemRepository
     {
-        private readonly ApplicationDbContext _context;
-
-        public CartItemRepository(ApplicationDbContext context)
+        public void Add(CartItem cartItem)
         {
-            _context = context;
+            context.CartItems.Add(cartItem);
         }
 
-        public async Task AddAsync(CartItem cartItem)
+        public void Update(CartItem cartItem)
         {
-            await _context.CartItems.AddAsync(cartItem);
-            await _context.SaveChangesAsync();
+            context.CartItems.Update(cartItem);
         }
 
-        public async Task UpdateAsync(CartItem cartItem)
+        public void Remove(CartItem cartItem)
         {
-            _context.CartItems.Update(cartItem);
-            await _context.SaveChangesAsync();
+            context.CartItems.Remove(cartItem);
         }
 
-        public async Task RemoveAsync(CartItem cartItem)
+        public void RemoveRange(IEnumerable<CartItem> cartItems)
         {
-            _context.CartItems.Remove(cartItem);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task RemoveRangeAsync(IEnumerable<CartItem> cartItems)
-        {
-            _context.CartItems.RemoveRange(cartItems);
-            await _context.SaveChangesAsync();
+            context.CartItems.RemoveRange(cartItems);
         }
     }
 }

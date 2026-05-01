@@ -4,9 +4,9 @@ namespace ECommerceApp.Repositories.Interfaces
 {
     public interface ICartItemRepository
     {
-        Task AddAsync(CartItem cartItem);
-        Task UpdateAsync(CartItem cartItem);
-        Task RemoveAsync(CartItem cartItem);
-        Task RemoveRangeAsync(IEnumerable<CartItem> cartItems);
+        void Add(CartItem cartItem);
+        void Update(CartItem cartItem);
+        void Remove(CartItem cartItem);
+        void RemoveRange(IEnumerable<CartItem> cartItems);
     }
 }
