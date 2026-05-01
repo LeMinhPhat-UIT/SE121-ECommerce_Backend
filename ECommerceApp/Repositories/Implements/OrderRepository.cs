@@ -71,6 +71,40 @@ public class OrderRepository(ApplicationDbContext context) : IOrderRepository
             .ToListAsync();
     }
     
+    public async Task<Order?> GetByIdAndCustomerIdWithPaymentAsync(int orderId, int customerId, bool trackChanges = false)
+    {
+        var query = context.Orders.AsQueryable();
+    
+        if (!trackChanges)
+        {
+            query = query.AsNoTracking();
+        }
+
+        return await query
+            .Include(o => o.Payment)
+            .FirstOrDefaultAsync(o => o.Id == orderId && o.CustomerId == customerId);
+    }
+    
+    public async Task<Order?> GetOrderWithFullDetailsAsync(int orderId, bool trackChanges = false)
+    {
+        var query = context.Orders.AsQueryable();
+    
+        if (!trackChanges)
+        {
+            query = query.AsNoTracking();
+        }
+
+        return await query
+            .Include(o => o.Customer)
+            .Include(o => o.BillingAddress)
+            .Include(o => o.ShippingAddress)
+            .Include(o => o.Payment)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+            .FirstOrDefaultAsync(o => o.Id == orderId);
+    }
+
+    
     public void Add(Order order)
     {
         context.Orders.Add(order);
