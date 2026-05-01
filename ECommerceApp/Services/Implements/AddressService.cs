@@ -1,164 +1,144 @@
 ﻿using ECommerceApp.Commons;
-using ECommerceApp.DTOs;
 using ECommerceApp.DTOs.AddressesDTOs;
-using ECommerceApp.Entites;
 using ECommerceApp.Mappings.Addresses;
 using ECommerceApp.Repositories.Interfaces;
 using ECommerceApp.Services.Interfaces;
 
-namespace ECommerceApp.Services.Implements
+namespace ECommerceApp.Services.Implements;
+
+public class AddressService(IUnitOfWork unitOfWork, IAddressMapper mapper) : IAddressService
 {
-    public class AddressService : IAddressService
+    public async Task<ApiResponse<AddressResponse>> CreateAddressAsync(AddressCreateRequest addressDto)
     {
-        private readonly IAddressRepository _addressRepository;
-        private readonly ICustomerRepository _customerRepository;
-        private readonly IAddressMapper _mapper;
-
-        public AddressService(IAddressRepository addressRepository, ICustomerRepository customerRepository, IAddressMapper mapper)
+        try
         {
-            _addressRepository = addressRepository;
-            _customerRepository = customerRepository;
-            _mapper = mapper;
+            var customer = await unitOfWork.CustomerRepository.GetByIdAsync(addressDto.CustomerId);
+            if (customer == null)
+            {
+                return new ApiResponse<AddressResponse>(404, "Customer not found.");
+            }
+
+            var address = mapper.Map(addressDto);
+
+            unitOfWork.AddressRepository.Add(address);
+            await unitOfWork.SaveChangesAsync();
+
+            var addressResponse = mapper.Map(address);
+
+            return new ApiResponse<AddressResponse>(200, addressResponse);
         }
-
-        public async Task<ApiResponse<AddressResponse>> CreateAddressAsync(AddressCreateRequest addressDto)
+        catch (Exception ex)
         {
-            try
-            {
-                // Check if customer exists
-                var customer = await _customerRepository.GetByIdAsync(addressDto.CustomerId);
-                if (customer == null)
-                {
-                    return new ApiResponse<AddressResponse>(404, "Customer not found.");
-                }
-
-                // Manual mapping from DTO to Model
-                var address = _mapper.Map(addressDto);
-
-                // Add address to the database
-                await _addressRepository.AddAsync(address);
-
-                // Map to AddressResponseDTO
-                var addressResponse = _mapper.Map(address);
-
-                return new ApiResponse<AddressResponse>(200, addressResponse);
-            }
-            catch (Exception ex)
-            {
-                // Log the exception
-                return new ApiResponse<AddressResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
-            }
+            return new ApiResponse<AddressResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
         }
+    }
 
-        public async Task<ApiResponse<AddressResponse>> GetAddressByIdAsync(int id)
+    public async Task<ApiResponse<AddressResponse>> GetAddressByIdAsync(int id)
+    {
+        try
         {
-            try
+            var address = await unitOfWork.AddressRepository.GetByIdAsync(id);
+
+            if (address == null)
             {
-                var address = await _addressRepository.GetByIdAsync(id);
-
-                if (address == null)
-                {
-                    return new ApiResponse<AddressResponse>(404, "Address not found.");
-                }
-
-                // Map to AddressResponseDTO
-                var addressResponse = _mapper.Map(address);
-
-                return new ApiResponse<AddressResponse>(200, addressResponse);
+                return new ApiResponse<AddressResponse>(404, "Address not found.");
             }
-            catch (Exception ex)
-            {
-                // Log the exception
-                return new ApiResponse<AddressResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
-            }
+
+            var addressResponse = mapper.Map(address);
+            return new ApiResponse<AddressResponse>(200, addressResponse);
         }
-
-        public async Task<ApiResponse<ConfirmationResponse>> UpdateAddressAsync(AddressUpdateRequest addressDto)
+        catch (Exception ex)
         {
-            try
-            {
-                var address = await _addressRepository.GetByIdAndCustomerIdAsync(addressDto.AddressId, addressDto.CustomerId);
-
-                if (address == null)
-                {
-                    return new ApiResponse<ConfirmationResponse>(404, "Address not found.");
-                }
-
-                // Update address properties
-                address.AddressLine1 = addressDto.AddressLine1;
-                address.AddressLine2 = addressDto.AddressLine2;
-                address.City = addressDto.City;
-                address.State = addressDto.State;
-                address.PostalCode = addressDto.PostalCode;
-                address.Country = addressDto.Country;
-
-                await _addressRepository.UpdateAsync(address);
-
-                // Prepare confirmation message
-                var confirmationMessage = new ConfirmationResponse
-                {
-                    Message = $"Address with Id {addressDto.AddressId} updated successfully."
-                };
-
-                return new ApiResponse<ConfirmationResponse>(200, confirmationMessage);
-            }
-            catch (Exception ex)
-            {
-                // Log the exception
-                return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
-            }
+            return new ApiResponse<AddressResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
         }
+    }
 
-        public async Task<ApiResponse<ConfirmationResponse>> DeleteAddressAsync(AddressDeleteRequest addressDeleteDTO)
+    public async Task<ApiResponse<ConfirmationResponse>> UpdateAddressAsync(AddressUpdateRequest addressDto)
+    {
+        try
         {
-            try
+            var address = await unitOfWork.AddressRepository.GetByIdAndCustomerIdAsync(
+                addressDto.AddressId, 
+                addressDto.CustomerId, 
+                trackChanges: true);
+
+            if (address == null)
             {
-                var address = await _addressRepository.GetByIdAndCustomerIdAsync(addressDeleteDTO.AddressId, addressDeleteDTO.CustomerId);
-
-                if (address == null)
-                {
-                    return new ApiResponse<ConfirmationResponse>(404, "Address not found.");
-                }
-
-                await _addressRepository.RemoveAsync(address);
-
-                // Prepare confirmation message
-                var confirmationMessage = new ConfirmationResponse
-                {
-                    Message = $"Address with Id {addressDeleteDTO.AddressId} deleted successfully."
-                };
-
-                return new ApiResponse<ConfirmationResponse>(200, confirmationMessage);
+                return new ApiResponse<ConfirmationResponse>(404, "Address not found.");
             }
-            catch (Exception ex)
+
+            address.AddressLine1 = addressDto.AddressLine1;
+            address.AddressLine2 = addressDto.AddressLine2;
+            address.City = addressDto.City;
+            address.State = addressDto.State;
+            address.PostalCode = addressDto.PostalCode;
+            address.Country = addressDto.Country;
+
+            await unitOfWork.SaveChangesAsync(); 
+
+            var confirmationMessage = new ConfirmationResponse
             {
-                // Log the exception
-                return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
-            }
+                Message = $"Address with Id {addressDto.AddressId} updated successfully."
+            };
+
+            return new ApiResponse<ConfirmationResponse>(200, confirmationMessage);
         }
-
-        public async Task<ApiResponse<PagedResult<AddressResponse>>> GetAddressesByCustomerAsync(int customerId, PaginationRequest paginationRequest)
+        catch (Exception ex)
         {
-            try
+            return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<ConfirmationResponse>> DeleteAddressAsync(AddressDeleteRequest addressDeleteDto)
+    {
+        try
+        {
+            var address = await unitOfWork.AddressRepository.GetByIdAndCustomerIdAsync(
+                addressDeleteDto.AddressId, 
+                addressDeleteDto.CustomerId, 
+                trackChanges: true);
+
+            if (address == null)
             {
-                var customer = await _customerRepository.GetByIdAsync(customerId);
-
-                if (customer == null)
-                {
-                    return new ApiResponse<PagedResult<AddressResponse>>(404, "Customer not found.");
-                }
-
-                var addresses = (await _addressRepository.GetByCustomerIdAsync(customerId))
-                    .Select(_mapper.Map)
-                    .ToPagedResult(paginationRequest);
-
-                return new ApiResponse<PagedResult<AddressResponse>>(200, addresses);
+                return new ApiResponse<ConfirmationResponse>(404, "Address not found.");
             }
-            catch (Exception ex)
+
+            unitOfWork.AddressRepository.Remove(address);
+            await unitOfWork.SaveChangesAsync();
+            
+            var confirmationMessage = new ConfirmationResponse
             {
-                // Log the exception
-                return new ApiResponse<PagedResult<AddressResponse>>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
+                Message = $"Address with Id {addressDeleteDto.AddressId} deleted successfully."
+            };
+
+            return new ApiResponse<ConfirmationResponse>(200, confirmationMessage);
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<PagedResult<AddressResponse>>> GetAddressesByCustomerAsync(int customerId, PaginationRequest paginationRequest)
+    {
+        try
+        {
+            var customer = await unitOfWork.CustomerRepository.GetByIdAsync(customerId);
+
+            if (customer == null)
+            {
+                return new ApiResponse<PagedResult<AddressResponse>>(404, "Customer not found.");
             }
+
+            var addresses = (await unitOfWork.AddressRepository.GetByCustomerIdAsync(customerId))
+                .Select(mapper.Map)
+                .ToPagedResult(paginationRequest);
+
+            return new ApiResponse<PagedResult<AddressResponse>>(200, addresses);
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<PagedResult<AddressResponse>>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
         }
     }
 }

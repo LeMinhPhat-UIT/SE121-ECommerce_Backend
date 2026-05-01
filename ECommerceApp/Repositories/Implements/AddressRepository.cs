@@ -1,3 +1,4 @@
+using System.Globalization;
 using ECommerceApp.Data;
 using ECommerceApp.Entites;
 using ECommerceApp.Repositories.Interfaces;
@@ -5,49 +6,56 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceApp.Repositories.Implements
 {
-    public class AddressRepository : IAddressRepository
+    public class AddressRepository(ApplicationDbContext context) : IAddressRepository
     {
-        private readonly ApplicationDbContext _context;
-
-        public AddressRepository(ApplicationDbContext context)
+        public async Task<Address?> GetByIdAsync(int id, bool trackChanges = false)
         {
-            _context = context;
+            var query = context.Addresses.AsQueryable();
+            if (!trackChanges)
+            {
+                query = query.AsNoTracking();
+            }
+            
+            return await query.FirstOrDefaultAsync(address => address.Id == id);
         }
 
-        public async Task<Address?> GetByIdAsync(int id)
+        public async Task<Address?> GetByIdAndCustomerIdAsync(int addressId, int customerId, bool trackChanges = false)
         {
-            return await _context.Addresses.FirstOrDefaultAsync(address => address.Id == id);
+            var query = context.Addresses.AsQueryable();
+            if (!trackChanges)
+            {
+                query = query.AsNoTracking();
+            }
+
+            return await query.FirstOrDefaultAsync(address => address.Id == addressId && address.CustomerId == customerId);
         }
 
-        public async Task<Address?> GetByIdAndCustomerIdAsync(int addressId, int customerId)
+        public async Task<List<Address>> GetByCustomerIdAsync(int customerId, bool trackChanges = false)
         {
-            return await _context.Addresses.FirstOrDefaultAsync(address => address.Id == addressId && address.CustomerId == customerId);
-        }
-
-        public async Task<List<Address>> GetByCustomerIdAsync(int customerId)
-        {
-            return await _context.Addresses
-                .AsNoTracking()
+            var query = context.Addresses.AsQueryable();
+            if (!trackChanges)
+            {
+                query = query.AsNoTracking();
+            }
+            
+            return await query
                 .Where(address => address.CustomerId == customerId)
                 .ToListAsync();
         }
 
-        public async Task AddAsync(Address address)
+        public void Add(Address address)
         {
-            await _context.Addresses.AddAsync(address);
-            await _context.SaveChangesAsync();
+            context.Addresses.Add(address);
         }
 
-        public async Task UpdateAsync(Address address)
+        public void Update(Address address)
         {
-            _context.Addresses.Update(address);
-            await _context.SaveChangesAsync();
+            context.Addresses.Update(address);
         }
 
-        public async Task RemoveAsync(Address address)
+        public void Remove(Address address)
         {
-            _context.Addresses.Remove(address);
-            await _context.SaveChangesAsync();
+            context.Addresses.Remove(address);
         }
     }
 }

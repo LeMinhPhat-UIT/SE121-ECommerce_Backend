@@ -4,11 +4,11 @@ namespace ECommerceApp.Repositories.Interfaces
 {
     public interface IAddressRepository
     {
-        Task<Address?> GetByIdAsync(int id);
-        Task<Address?> GetByIdAndCustomerIdAsync(int addressId, int customerId);
-        Task<List<Address>> GetByCustomerIdAsync(int customerId);
-        Task AddAsync(Address address);
-        Task UpdateAsync(Address address);
-        Task RemoveAsync(Address address);
+        Task<Address?> GetByIdAsync(int id, bool trackChanges = false);
+        Task<Address?> GetByIdAndCustomerIdAsync(int addressId, int customerId, bool trackChanges = false);
+        Task<List<Address>> GetByCustomerIdAsync(int customerId, bool trackChanges = false);
+        void Add(Address address);
+        void Update(Address address);
+        void Remove(Address address);
     }
 }

@@ -5,51 +5,59 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceApp.Repositories.Implements
 {
-    public class CustomerRepository : ICustomerRepository
+    public class CustomerRepository(ApplicationDbContext context) : ICustomerRepository
     {
-        private readonly ApplicationDbContext _context;
-
-        public CustomerRepository(ApplicationDbContext context)
-        {
-            _context = context;
-        }
-
         public async Task<bool> ExistsByEmailAsync(string email, int? excludeCustomerId = null)
         {
             var normalizedEmail = email.Trim().ToLower();
 
-            return await _context.Customers.AnyAsync(customer =>
+            return await context.Customers.AnyAsync(customer =>
                 customer.Email.ToLower() == normalizedEmail &&
                 (!excludeCustomerId.HasValue || customer.Id != excludeCustomerId.Value));
         }
 
-        public async Task<Customer?> GetByIdAsync(int id)
+        public async Task<Customer?> GetByIdAsync(int id, bool trackChanges = false)
         {
-            return await _context.Customers.FirstOrDefaultAsync(customer => customer.Id == id);
+            var query = context.Customers.AsQueryable();
+            if (!trackChanges)
+            {
+                query = query.AsNoTracking();
+            }
+            
+            return await query.FirstOrDefaultAsync(customer => customer.Id == id);
         }
 
-        public async Task<Customer?> GetActiveByIdAsync(int id)
+        public async Task<Customer?> GetActiveByIdAsync(int id, bool trackChanges = false)
         {
-            return await _context.Customers.FirstOrDefaultAsync(customer => customer.Id == id && customer.IsActive);
+            var query = context.Customers.AsQueryable();
+            if (!trackChanges)
+            {
+                query = query.AsNoTracking();
+            }
+            
+            return await query.FirstOrDefaultAsync(customer => customer.Id == id && customer.IsActive);
         }
 
-        public async Task<Customer?> GetByEmailAsync(string email)
+        public async Task<Customer?> GetByEmailAsync(string email, bool trackChanges = false)
         {
             var normalizedEmail = email.Trim().ToLower();
-
-            return await _context.Customers.FirstOrDefaultAsync(customer => customer.Email.ToLower() == normalizedEmail);
+            var query = context.Customers.AsQueryable();
+            if (!trackChanges)
+            {
+                query = query.AsNoTracking();
+            }
+            
+            return await query.FirstOrDefaultAsync(customer => customer.Email.ToLower() == normalizedEmail);
         }
 
-        public async Task AddAsync(Customer customer)
+        public void Add(Customer customer)
         {
-            await _context.Customers.AddAsync(customer);
-            await _context.SaveChangesAsync();
+            context.Customers.Add(customer);
         }
 
-        public async Task UpdateAsync(Customer customer)
+        public void Update(Customer customer)
         {
-            _context.Customers.Update(customer);
-            await _context.SaveChangesAsync();
+            context.Customers.Update(customer);
         }
     }
 }
