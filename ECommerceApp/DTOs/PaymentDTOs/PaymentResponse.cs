@@ -2,7 +2,7 @@
 
 namespace ECommerceApp.DTOs.PaymentDTOs
 {
-    public class PaymentResponseDTO
+    public class PaymentResponse
     {
         public int PaymentId { get; set; }
         public int OrderId { get; set; }
