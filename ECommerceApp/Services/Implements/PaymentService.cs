@@ -291,7 +291,7 @@ namespace ECommerceApp.Services.Implements
                    paymentMethod.Equals("COD", StringComparison.OrdinalIgnoreCase);
         }
 
-        private async Task SendOrderConfirmationEmailAsync(int orderId)
+        public async Task SendOrderConfirmationEmailAsync(int orderId)
         {
             var order = await unitOfWork.OrderRepository.GetOrderWithFullDetailsAsync(orderId);
 

@@ -61,6 +61,7 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHostedService<PendingPaymentService>();
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
