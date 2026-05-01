@@ -57,6 +57,8 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IShoppingCartService, ShoppingCartService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 builder.Services.AddScoped<IAddressMapper, AddressMapper>();
 builder.Services.AddScoped<IProductMapper, ProductMapper>();
 builder.Services.AddScoped<ICategoryMapper, CategoryMapper>();
