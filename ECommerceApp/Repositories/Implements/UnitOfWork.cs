@@ -7,12 +7,14 @@ public class UnitOfWork(
         ApplicationDbContext context,
         IAddressRepository addressRepo,
         ICustomerRepository customerRepo,
-        ICategoryRepository categoryRepo
+        ICategoryRepository categoryRepo,
+        IProductRepository productRepo
     ) : IUnitOfWork
 {
     public IAddressRepository AddressRepository => addressRepo;
     public ICustomerRepository CustomerRepository => customerRepo;
     public ICategoryRepository CategoryRepository => categoryRepo;
+    public IProductRepository ProductRepository => productRepo;
     
     public async Task<int> SaveChangesAsync()
     {
