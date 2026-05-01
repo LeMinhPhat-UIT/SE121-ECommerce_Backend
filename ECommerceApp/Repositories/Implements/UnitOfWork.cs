@@ -12,7 +12,8 @@ public class UnitOfWork(
         IProductRepository productRepo,
         ICartRepository cartRepo,
         ICartItemRepository cartItemRepo,
-        IOrderRepository orderRepo
+        IOrderRepository orderRepo,
+        IPaymentRepository paymentRepo
     ) : IUnitOfWork
 {
     public IAddressRepository AddressRepository => addressRepo;
@@ -22,6 +23,7 @@ public class UnitOfWork(
     public ICartRepository CartRepository => cartRepo;
     public ICartItemRepository CartItemRepository => cartItemRepo;
     public IOrderRepository OrderRepository => orderRepo;
+    public IPaymentRepository PaymentRepository => paymentRepo;
     
     public async Task<int> SaveChangesAsync()
     {
