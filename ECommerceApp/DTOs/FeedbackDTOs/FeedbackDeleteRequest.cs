@@ -2,7 +2,7 @@
 
 namespace ECommerceApp.DTOs.FeedbackDTOs
 {
-    public class FeedbackDeleteDTO
+    public class FeedbackDeleteRequest
     {
         [Required(ErrorMessage = "FeedbackId is required.")]
         public int FeedbackId { get; set; }

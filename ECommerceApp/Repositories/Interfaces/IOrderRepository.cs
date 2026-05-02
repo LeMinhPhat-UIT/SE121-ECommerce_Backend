@@ -11,5 +11,6 @@ public interface IOrderRepository
     Task<Order?> GetByIdAndCustomerIdWithPaymentAsync(int orderId, int customerId, bool trackChanges = false);
     Task<Order?> GetOrderWithFullDetailsAsync(int orderId, bool trackChanges = false);
     Task<Order?> GetByIdAndCustomerIdAsync(int orderId, int customerId, bool trackChanges = false);
+    Task<bool> HasCustomerPurchasedAndReceivedProductAsync(int customerId, int productId);
     void Add(Order order);
 }

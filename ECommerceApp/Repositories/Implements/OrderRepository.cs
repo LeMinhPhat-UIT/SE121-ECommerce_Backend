@@ -112,6 +112,14 @@ public class OrderRepository(ApplicationDbContext context) : IOrderRepository
         return await query.FirstOrDefaultAsync(o => o.Id == orderId && o.CustomerId == customerId);
     }
     
+    public async Task<bool> HasCustomerPurchasedAndReceivedProductAsync(int customerId, int productId)
+    {
+        return await context.Orders
+            .Where(o => o.CustomerId == customerId && o.OrderStatus == OrderStatus.Delivered)
+            .SelectMany(o => o.OrderItems)
+            .AnyAsync(oi => oi.ProductId == productId);
+    }
+    
     public void Add(Order order)
     {
         context.Orders.Add(order);

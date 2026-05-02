@@ -14,7 +14,8 @@ public class UnitOfWork(
         ICartItemRepository cartItemRepo,
         IOrderRepository orderRepo,
         IPaymentRepository paymentRepo,
-        ICancellationRepository cancellationRepo
+        ICancellationRepository cancellationRepo,
+        IFeedbackRepository feedbackRepo
     ) : IUnitOfWork
 {
     public IAddressRepository AddressRepository => addressRepo;
@@ -26,6 +27,7 @@ public class UnitOfWork(
     public IOrderRepository OrderRepository => orderRepo;
     public IPaymentRepository PaymentRepository => paymentRepo;
     public ICancellationRepository CancellationRepository => cancellationRepo;
+    public IFeedbackRepository FeedbackRepository => feedbackRepo;
     
     public async Task<int> SaveChangesAsync()
     {
