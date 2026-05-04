@@ -18,6 +18,7 @@ using ECommerceApp.Mappings.Orders;
 using ECommerceApp.Mappings.Payments;
 using ECommerceApp.Mappings.Products;
 using ECommerceApp.Mappings.Refunds;
+using ECommerceApp.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -75,6 +76,9 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseLoggingMiddleware();
+app.UseErrorHandlingMiddleware();
 
 app.UseHttpsRedirection();
 
