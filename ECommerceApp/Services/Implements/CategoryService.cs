@@ -11,17 +11,20 @@ namespace ECommerceApp.Services
     {
         private readonly ICategoryRepository _categoryRepository;
         private readonly ICategoryMapper _mapper;
+        private readonly ILogger<CategoryService> _logger;
 
-        public CategoryService(ICategoryRepository categoryRepository, ICategoryMapper mapper)
+        public CategoryService(ICategoryRepository categoryRepository, ICategoryMapper mapper, ILogger<CategoryService> logger)
         {
             _categoryRepository = categoryRepository;
             _mapper = mapper;
+            _logger = logger;
         }
 
         public async Task<ApiResponse<CategoryResponse>> CreateCategoryAsync(CategoryCreateRequest categoryDto)
         {
             try
             {
+                _logger.LogInformation("CategoryService operation started.");
                 if (await _categoryRepository.ExistsByNameAsync(categoryDto.Name))
                 {
                     return new ApiResponse<CategoryResponse>(400, "Category name already exists.");
@@ -36,6 +39,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "CategoryService operation failed.");
                 return new ApiResponse<CategoryResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -44,6 +48,7 @@ namespace ECommerceApp.Services
         {
             try
             {
+                _logger.LogInformation("CategoryService operation started.");
                 var category = await _categoryRepository.GetByIdAsync(id);
 
                 if (category == null)
@@ -55,6 +60,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "CategoryService operation failed.");
                 return new ApiResponse<CategoryResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -63,6 +69,7 @@ namespace ECommerceApp.Services
         {
             try
             {
+                _logger.LogInformation("CategoryService operation started.");
                 var category = await _categoryRepository.GetByIdAsync(categoryDto.Id);
                 if (category == null)
                 {
@@ -86,6 +93,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "CategoryService operation failed.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -94,6 +102,7 @@ namespace ECommerceApp.Services
         {
             try
             {
+                _logger.LogInformation("CategoryService operation started.");
                 var category = await _categoryRepository.GetByIdAsync(id);
 
                 if (category == null)
@@ -111,6 +120,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "CategoryService operation failed.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -119,6 +129,7 @@ namespace ECommerceApp.Services
         {
             try
             {
+                _logger.LogInformation("CategoryService operation started.");
                 var categories = await _categoryRepository.GetAllAsync();
 
                 var categoryList = categories.Select(_mapper.Map).ToPagedResult(paginationRequest);
@@ -127,6 +138,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "CategoryService operation failed.");
                 return new ApiResponse<PagedResult<CategoryResponse>>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }

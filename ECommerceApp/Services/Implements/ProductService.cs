@@ -13,18 +13,21 @@ namespace ECommerceApp.Services
         private readonly IProductRepository _productRepository;
         private readonly ICategoryRepository _categoryRepository;
         private readonly IProductMapper _mapper;
+        private readonly ILogger<ProductService> _logger;
 
-        public ProductService(IProductRepository productRepository, ICategoryRepository categoryRepository, IProductMapper mapper)
+        public ProductService(IProductRepository productRepository, ICategoryRepository categoryRepository, IProductMapper mapper, ILogger<ProductService> logger)
         {
             _productRepository = productRepository;
             _categoryRepository = categoryRepository;
             _mapper = mapper;
+            _logger = logger;
         }
 
         public async Task<ApiResponse<ProductResponse>> CreateProductAsync(ProductCreateRequest productDto)
         {
             try
             {
+                _logger.LogInformation("ProductService operation started.");
                 if (await _productRepository.ExistsByNameAsync(productDto.Name))
                 {
                     return new ApiResponse<ProductResponse>(400, "Product name already exists.");
@@ -44,6 +47,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "ProductService operation failed.");
                 return new ApiResponse<ProductResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -52,6 +56,7 @@ namespace ECommerceApp.Services
         {
             try
             {
+                _logger.LogInformation("ProductService operation started.");
                 var product = await _productRepository.GetByIdAsync(id);
 
                 if (product == null)
@@ -63,6 +68,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "ProductService operation failed.");
                 return new ApiResponse<ProductResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -71,6 +77,7 @@ namespace ECommerceApp.Services
         {
             try
             {
+                _logger.LogInformation("ProductService operation started.");
                 var product = await _productRepository.GetByIdAsync(productDto.Id);
                 if (product == null)
                 {
@@ -104,6 +111,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "ProductService operation failed.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -112,6 +120,7 @@ namespace ECommerceApp.Services
         {
             try
             {
+                _logger.LogInformation("ProductService operation started.");
                 var product = await _productRepository.GetByIdAsync(id);
 
                 if (product == null)
@@ -129,6 +138,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "ProductService operation failed.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -137,6 +147,7 @@ namespace ECommerceApp.Services
         {
             try
             {
+                _logger.LogInformation("ProductService operation started.");
                 var products = await _productRepository.GetAllAsync();
 
                 var productList = products.Select(_mapper.Map).ToPagedResult(paginationRequest);
@@ -145,6 +156,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "ProductService operation failed.");
                 return new ApiResponse<PagedResult<ProductResponse>>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -153,6 +165,7 @@ namespace ECommerceApp.Services
         {
             try
             {
+                _logger.LogInformation("ProductService operation started.");
                 var products = await _productRepository.GetByCategoryAsync(categoryId);
 
                 if (products.Count == 0)
@@ -166,6 +179,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "ProductService operation failed.");
                 return new ApiResponse<PagedResult<ProductResponse>>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -174,6 +188,7 @@ namespace ECommerceApp.Services
         {
             try
             {
+                _logger.LogInformation("ProductService operation started.");
                 var product = await _productRepository.GetByIdAsync(productStatusUpdateDTO.ProductId);
 
                 if (product == null)
@@ -191,6 +206,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "ProductService operation failed.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }

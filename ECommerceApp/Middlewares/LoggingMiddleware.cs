@@ -2,11 +2,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace ECommerceApp.Middlewares
 {
-    // You may need to install the Microsoft.AspNetCore.Http.Abstractions package into your project
     public class LoggingMiddleware
     {
         private readonly RequestDelegate _next;
@@ -20,19 +20,42 @@ namespace ECommerceApp.Middlewares
 
         public async Task Invoke(HttpContext httpContext)
         {
-            _logger.LogInformation("Incoming Request: {method} {url}", httpContext.Request.Method, httpContext.Request.Path);
             var stopwatch = Stopwatch.StartNew();
+            var startedAtUtc = DateTime.UtcNow;
+
+            _logger.LogInformation(
+                "Incoming request {Method} {Path}{QueryString} TraceId={TraceId} UserId={UserId} RemoteIp={RemoteIp}",
+                httpContext.Request.Method,
+                httpContext.Request.Path,
+                httpContext.Request.QueryString,
+                httpContext.TraceIdentifier,
+                httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous",
+                httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
 
             try
             {
                 await _next(httpContext);
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception for {Method} {Path} TraceId={TraceId}", httpContext.Request.Method, httpContext.Request.Path, httpContext.TraceIdentifier);
+                throw;
+            }
             finally
             {
                 stopwatch.Stop();
-                _logger.LogInformation("Outgoing Response: {statusCode} within {time}ms",
-                    httpContext.Response.StatusCode,
-                    stopwatch.ElapsedMilliseconds);
+                var statusCode = httpContext.Response.StatusCode;
+
+                _logger.Log(
+                    statusCode >= StatusCodes.Status500InternalServerError ? LogLevel.Error :
+                    statusCode >= StatusCodes.Status400BadRequest ? LogLevel.Warning : LogLevel.Information,
+                    "Outgoing response {StatusCode} for {Method} {Path} completed in {ElapsedMilliseconds}ms at {StartedAtUtc} TraceId={TraceId}",
+                    statusCode,
+                    httpContext.Request.Method,
+                    httpContext.Request.Path,
+                    stopwatch.ElapsedMilliseconds,
+                    startedAtUtc,
+                    httpContext.TraceIdentifier);
             }
         }
     }

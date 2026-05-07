@@ -18,18 +18,21 @@ namespace ECommerceApp.Services.Implements
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly ICustomerMapper _mapper;
+        private readonly ILogger<CustomerService> _logger;
 
-        public CustomerService(ApplicationDbContext context, IConfiguration configuration, ICustomerMapper mapper)
+        public CustomerService(ApplicationDbContext context, IConfiguration configuration, ICustomerMapper mapper, ILogger<CustomerService> logger)
         {
             _context = context;
             _configuration = configuration;
             _mapper = mapper;
+            _logger = logger;
         }
 
         public async Task<ApiResponse<CustomerResponse>> RegisterCustomerAsync(CustomerRegistrationRequest customerDto)
         {
             try
             {
+                _logger.LogInformation("CustomerService operation started.");
                 if (await _context.Customers.AnyAsync(c => c.Email.ToLower() == customerDto.Email.ToLower()))
                 {
                     return new ApiResponse<CustomerResponse>(400, "Email is already in use.");
@@ -48,6 +51,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "CustomerService operation failed.");
                 return new ApiResponse<CustomerResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -56,6 +60,7 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
+                _logger.LogInformation("CustomerService operation started.");
                 var customer = await _context.Customers
                     .AsNoTracking()
                     .FirstOrDefaultAsync(c => c.Email == request.Email);
@@ -88,6 +93,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "CustomerService operation failed.");
                 return new ApiResponse<LoginResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -96,6 +102,7 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
+                _logger.LogInformation("CustomerService operation started.");
                 var customer = await _context.Customers
                     .AsNoTracking()
                     .FirstOrDefaultAsync(c => c.Id == id && c.IsActive == true);
@@ -111,6 +118,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "CustomerService operation failed.");
                 return new ApiResponse<CustomerResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -119,6 +127,7 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
+                _logger.LogInformation("CustomerService operation started.");
                 var customer = await _context.Customers.FindAsync(customerDto.CustomerId);
                 if (customer == null)
                 {
@@ -147,6 +156,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "CustomerService operation failed.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -155,6 +165,7 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
+                _logger.LogInformation("CustomerService operation started.");
                 var customer = await _context.Customers
                     .FirstOrDefaultAsync(c => c.Id == id);
 
@@ -175,6 +186,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "CustomerService operation failed.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -183,6 +195,7 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
+                _logger.LogInformation("CustomerService operation started.");
                 var customer = await _context.Customers.FindAsync(request.CustomerId);
                 if (customer == null || !customer.IsActive)
                 {
@@ -208,6 +221,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "CustomerService operation failed.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }

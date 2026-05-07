@@ -14,19 +14,22 @@ namespace ECommerceApp.Services
         private readonly ICartItemRepository _cartItemRepository;
         private readonly IProductRepository _productRepository;
         private readonly ICartMapper _mapper;
+        private readonly ILogger<ShoppingCartService> _logger;
 
-        public ShoppingCartService(ICartRepository cartRepository, ICartItemRepository cartItemRepository, IProductRepository productRepository, ICartMapper mapper)
+        public ShoppingCartService(ICartRepository cartRepository, ICartItemRepository cartItemRepository, IProductRepository productRepository, ICartMapper mapper, ILogger<ShoppingCartService> logger)
         {
             _cartRepository = cartRepository;
             _cartItemRepository = cartItemRepository;
             _productRepository = productRepository;
             _mapper = mapper;
+            _logger = logger;
         }
 
         public async Task<ApiResponse<CartResponse>> GetCartByCustomerIdAsync(int customerId)
         {
             try
             {
+                _logger.LogInformation("ShoppingCartService operation started.");
                 var cart = await _cartRepository.GetActiveCartByCustomerIdAsync(customerId);
 
                 if (cart == null)
@@ -51,6 +54,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "ShoppingCartService operation failed.");
                 return new ApiResponse<CartResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -59,6 +63,7 @@ namespace ECommerceApp.Services
         {
             try
             {
+                _logger.LogInformation("ShoppingCartService operation started.");
                 var product = await _productRepository.GetByIdAsync(addToCartDTO.ProductId);
                 if (product == null)
                 {
@@ -129,6 +134,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "ShoppingCartService operation failed.");
                 return new ApiResponse<CartResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -137,6 +143,7 @@ namespace ECommerceApp.Services
         {
             try
             {
+                _logger.LogInformation("ShoppingCartService operation started.");
                 var cart = await _cartRepository.GetActiveCartByCustomerIdAsync(updateCartItemDTO.CustomerId);
 
                 if (cart == null)
@@ -171,6 +178,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "ShoppingCartService operation failed.");
                 return new ApiResponse<CartResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -179,6 +187,7 @@ namespace ECommerceApp.Services
         {
             try
             {
+                _logger.LogInformation("ShoppingCartService operation started.");
                 var cart = await _cartRepository.GetActiveCartByCustomerIdAsync(removeCartItemDTO.CustomerId);
 
                 if (cart == null)
@@ -204,6 +213,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "ShoppingCartService operation failed.");
                 return new ApiResponse<CartResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -212,6 +222,7 @@ namespace ECommerceApp.Services
         {
             try
             {
+                _logger.LogInformation("ShoppingCartService operation started.");
                 var cart = await _cartRepository.GetActiveCartByCustomerIdAsync(customerId);
 
                 if (cart == null)
@@ -235,6 +246,7 @@ namespace ECommerceApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "ShoppingCartService operation failed.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }

@@ -13,18 +13,21 @@ namespace ECommerceApp.Services.Implements
         private readonly IAddressRepository _addressRepository;
         private readonly ICustomerRepository _customerRepository;
         private readonly IAddressMapper _mapper;
+        private readonly ILogger<AddressService> _logger;
 
-        public AddressService(IAddressRepository addressRepository, ICustomerRepository customerRepository, IAddressMapper mapper)
+        public AddressService(IAddressRepository addressRepository, ICustomerRepository customerRepository, IAddressMapper mapper, ILogger<AddressService> logger)
         {
             _addressRepository = addressRepository;
             _customerRepository = customerRepository;
             _mapper = mapper;
+            _logger = logger;
         }
 
         public async Task<ApiResponse<AddressResponse>> CreateAddressAsync(AddressCreateRequest addressDto)
         {
             try
             {
+                _logger.LogInformation("AddressService operation started.");
                 // Check if customer exists
                 var customer = await _customerRepository.GetByIdAsync(addressDto.CustomerId);
                 if (customer == null)
@@ -45,6 +48,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "AddressService operation failed.");
                 // Log the exception
                 return new ApiResponse<AddressResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
@@ -54,6 +58,7 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
+                _logger.LogInformation("AddressService operation started.");
                 var address = await _addressRepository.GetByIdAsync(id);
 
                 if (address == null)
@@ -68,6 +73,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "AddressService operation failed.");
                 // Log the exception
                 return new ApiResponse<AddressResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
@@ -77,6 +83,7 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
+                _logger.LogInformation("AddressService operation started.");
                 var address = await _addressRepository.GetByIdAndCustomerIdAsync(addressDto.AddressId, addressDto.CustomerId);
 
                 if (address == null)
@@ -104,6 +111,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "AddressService operation failed.");
                 // Log the exception
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
@@ -113,6 +121,7 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
+                _logger.LogInformation("AddressService operation started.");
                 var address = await _addressRepository.GetByIdAndCustomerIdAsync(addressDeleteDTO.AddressId, addressDeleteDTO.CustomerId);
 
                 if (address == null)
@@ -132,6 +141,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "AddressService operation failed.");
                 // Log the exception
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
@@ -141,6 +151,7 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
+                _logger.LogInformation("AddressService operation started.");
                 var customer = await _customerRepository.GetByIdAsync(customerId);
 
                 if (customer == null)
@@ -156,6 +167,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "AddressService operation failed.");
                 // Log the exception
                 return new ApiResponse<PagedResult<AddressResponse>>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
