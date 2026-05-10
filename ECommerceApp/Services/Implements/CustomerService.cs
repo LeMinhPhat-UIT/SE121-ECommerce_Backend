@@ -58,7 +58,7 @@ namespace ECommerceApp.Services.Implements
             {
                 var customer = await _context.Customers
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(c => c.Email == request.Email);
+                    .FirstOrDefaultAsync(c => c.Email.ToLower() == request.Email.ToLower());
 
                 if (customer == null)
                 {
@@ -119,7 +119,7 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
-                var customer = await _context.Customers.FindAsync(customerDto.CustomerId);
+                var customer = await _context.Customers.FirstOrDefaultAsync(c => c.Id == customerDto.CustomerId && c.IsActive);
                 if (customer == null)
                 {
                     return new ApiResponse<ConfirmationResponse>(404, "Customer not found.");

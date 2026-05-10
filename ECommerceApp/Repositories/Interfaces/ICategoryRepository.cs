@@ -8,6 +8,7 @@ namespace ECommerceApp.Repositories.Interfaces
         Task<bool> ExistsByIdAsync(int id);
         Task<Category?> GetByIdAsync(int id);
         Task<List<Category>> GetAllAsync();
+        IQueryable<Category> QueryAllActive();
         Task AddAsync(Category category);
         Task UpdateAsync(Category category);
     }

@@ -1,5 +1,5 @@
 using ECommerceApp.Data;
-using ECommerceApp.Entites;
+using ECommerceApp.Entities;
 using ECommerceApp.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,6 +30,13 @@ namespace ECommerceApp.Repositories.Implements
                 .AsNoTracking()
                 .Where(address => address.CustomerId == customerId)
                 .ToListAsync();
+        }
+
+        public IQueryable<Address> QueryByCustomerId(int customerId)
+        {
+            return _context.Addresses
+                .AsNoTracking()
+                .Where(address => address.CustomerId == customerId);
         }
 
         public async Task AddAsync(Address address)

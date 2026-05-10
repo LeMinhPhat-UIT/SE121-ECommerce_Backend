@@ -1,5 +1,5 @@
 using ECommerceApp.DTOs.ProductDTOs;
-using ECommerceApp.Entites;
+using ECommerceApp.Entities;
 using Riok.Mapperly.Abstractions;
 
 namespace ECommerceApp.Mappings.Products

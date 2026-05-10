@@ -1,12 +1,13 @@
 ﻿using ECommerceApp.Commons;
 using ECommerceApp.DTOs;
 using ECommerceApp.DTOs.ProductDTOs;
-using ECommerceApp.Entites;
+using ECommerceApp.Entities;
 using ECommerceApp.Mappings.Products;
 using ECommerceApp.Repositories.Interfaces;
 using ECommerceApp.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
-namespace ECommerceApp.Services
+namespace ECommerceApp.Services.Implements
 {
     public class ProductService : IProductService
     {
@@ -112,7 +113,7 @@ namespace ECommerceApp.Services
         {
             try
             {
-                var product = await _productRepository.GetByIdAsync(id);
+                var product = await _productRepository.GetByIdIncludingUnavailableAsync(id);
 
                 if (product == null)
                 {
@@ -137,9 +138,20 @@ namespace ECommerceApp.Services
         {
             try
             {
-                var products = await _productRepository.GetAllAsync();
+                var safeRequest = new PaginationRequest
+                {
+                    PageIndex = paginationRequest?.PageIndex > 0 ? paginationRequest.PageIndex : 1,
+                    PageSize = paginationRequest?.PageSize > 0 ? paginationRequest.PageSize : 10
+                };
 
-                var productList = products.Select(_mapper.Map).ToPagedResult(paginationRequest);
+                var productQuery = _productRepository.QueryAllAvailable();
+                var totalCount = await productQuery.CountAsync();
+                var products = await productQuery
+                    .Skip((safeRequest.PageIndex - 1) * safeRequest.PageSize)
+                    .Take(safeRequest.PageSize)
+                    .ToListAsync();
+
+                var productList = new PagedResult<ProductResponse>(products.Select(_mapper.Map), safeRequest, totalCount);
 
                 return new ApiResponse<PagedResult<ProductResponse>>(200, productList);
             }
@@ -153,14 +165,26 @@ namespace ECommerceApp.Services
         {
             try
             {
-                var products = await _productRepository.GetByCategoryAsync(categoryId);
+                var safeRequest = new PaginationRequest
+                {
+                    PageIndex = paginationRequest?.PageIndex > 0 ? paginationRequest.PageIndex : 1,
+                    PageSize = paginationRequest?.PageSize > 0 ? paginationRequest.PageSize : 10
+                };
 
-                if (products.Count == 0)
+                var productQuery = _productRepository.QueryByCategory(categoryId);
+                var totalCount = await productQuery.CountAsync();
+
+                if (totalCount == 0)
                 {
                     return new ApiResponse<PagedResult<ProductResponse>>(404, "Products not found.");
                 }
 
-                var productList = products.Select(_mapper.Map).ToPagedResult(paginationRequest);
+                var products = await productQuery
+                    .Skip((safeRequest.PageIndex - 1) * safeRequest.PageSize)
+                    .Take(safeRequest.PageSize)
+                    .ToListAsync();
+
+                var productList = new PagedResult<ProductResponse>(products.Select(_mapper.Map), safeRequest, totalCount);
 
                 return new ApiResponse<PagedResult<ProductResponse>>(200, productList);
             }

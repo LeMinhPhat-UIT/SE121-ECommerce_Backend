@@ -4,8 +4,9 @@ using ECommerceApp.Entities;
 using ECommerceApp.Mappings.Categories;
 using ECommerceApp.Repositories.Interfaces;
 using ECommerceApp.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
-namespace ECommerceApp.Services
+namespace ECommerceApp.Services.Implements
 {
     public class CategoryService : ICategoryService
     {
@@ -119,9 +120,20 @@ namespace ECommerceApp.Services
         {
             try
             {
-                var categories = await _categoryRepository.GetAllAsync();
+                var safeRequest = new PaginationRequest
+                {
+                    PageIndex = paginationRequest?.PageIndex > 0 ? paginationRequest.PageIndex : 1,
+                    PageSize = paginationRequest?.PageSize > 0 ? paginationRequest.PageSize : 10
+                };
 
-                var categoryList = categories.Select(_mapper.Map).ToPagedResult(paginationRequest);
+                var categoryQuery = _categoryRepository.QueryAllActive();
+                var totalCount = await categoryQuery.CountAsync();
+                var categories = await categoryQuery
+                    .Skip((safeRequest.PageIndex - 1) * safeRequest.PageSize)
+                    .Take(safeRequest.PageSize)
+                    .ToListAsync();
+
+                var categoryList = new PagedResult<CategoryResponse>(categories.Select(_mapper.Map), safeRequest, totalCount);
 
                 return new ApiResponse<PagedResult<CategoryResponse>>(200, categoryList);
             }

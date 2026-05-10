@@ -6,6 +6,7 @@ namespace ECommerceApp.Repositories.Interfaces
     {
         Task<Cart?> GetActiveCartByCustomerIdAsync(int customerId);
         Task<Cart?> GetByIdWithItemsAsync(int cartId);
+        Task<TResult> ExecuteInTransactionAsync<TResult>(Func<Task<TResult>> action);
         Task AddAsync(Cart cart);
         Task UpdateAsync(Cart cart);
         Task RemoveAsync(Cart cart);

@@ -6,7 +6,7 @@ using ECommerceApp.Mappings.Carts;
 using ECommerceApp.Repositories.Interfaces;
 using ECommerceApp.Services.Interfaces;
 
-namespace ECommerceApp.Services
+namespace ECommerceApp.Services.Implements
 {
     public class ShoppingCartService : IShoppingCartService
     {
@@ -59,73 +59,76 @@ namespace ECommerceApp.Services
         {
             try
             {
-                var product = await _productRepository.GetByIdAsync(addToCartDTO.ProductId);
-                if (product == null)
+                return await _cartRepository.ExecuteInTransactionAsync(async () =>
                 {
-                    return new ApiResponse<CartResponse>(404, "Product not found.");
-                }
-
-                if (addToCartDTO.Quantity > product.StockQuantity)
-                {
-                    return new ApiResponse<CartResponse>(400, $"Only {product.StockQuantity} units of {product.Name} are available.");
-                }
-
-                var cart = await _cartRepository.GetActiveCartByCustomerIdAsync(addToCartDTO.CustomerId);
-
-                if (cart == null)
-                {
-                    cart = new Cart
+                    var product = await _productRepository.GetByIdAsync(addToCartDTO.ProductId);
+                    if (product == null)
                     {
-                        CustomerId = addToCartDTO.CustomerId,
-                        IsCheckedOut = false,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                        CartItems = new List<CartItem>()
-                    };
-
-                    await _cartRepository.AddAsync(cart);
-                }
-
-                var existingCartItem = cart.CartItems.FirstOrDefault(ci => ci.ProductId == addToCartDTO.ProductId);
-                if (existingCartItem != null)
-                {
-                    if (existingCartItem.Quantity + addToCartDTO.Quantity > product.StockQuantity)
-                    {
-                        return new ApiResponse<CartResponse>(400, $"Adding {addToCartDTO.Quantity} exceeds available stock.");
+                        return new ApiResponse<CartResponse>(404, "Product not found.");
                     }
 
-                    existingCartItem.Quantity += addToCartDTO.Quantity;
-                    existingCartItem.TotalPrice = (existingCartItem.UnitPrice - existingCartItem.Discount) * existingCartItem.Quantity;
-                    existingCartItem.UpdatedAt = DateTime.UtcNow;
-
-                    await _cartItemRepository.UpdateAsync(existingCartItem);
-                }
-                else
-                {
-                    var discount = product.DiscountPercentage > 0 ? product.Price * product.DiscountPercentage / 100 : 0;
-
-                    var cartItem = new CartItem
+                    if (addToCartDTO.Quantity > product.StockQuantity)
                     {
-                        CartId = cart.Id,
-                        ProductId = product.Id,
-                        Quantity = addToCartDTO.Quantity,
-                        UnitPrice = product.Price,
-                        Discount = discount,
-                        TotalPrice = (product.Price - discount) * addToCartDTO.Quantity,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    };
+                        return new ApiResponse<CartResponse>(400, $"Only {product.StockQuantity} units of {product.Name} are available.");
+                    }
 
-                    await _cartItemRepository.AddAsync(cartItem);
-                }
+                    var cart = await _cartRepository.GetActiveCartByCustomerIdAsync(addToCartDTO.CustomerId);
 
-                cart.UpdatedAt = DateTime.UtcNow;
-                await _cartRepository.UpdateAsync(cart);
+                    if (cart == null)
+                    {
+                        cart = new Cart
+                        {
+                            CustomerId = addToCartDTO.CustomerId,
+                            IsCheckedOut = false,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            CartItems = new List<CartItem>()
+                        };
 
-                cart = await _cartRepository.GetByIdWithItemsAsync(cart.Id) ?? new Cart();
+                        await _cartRepository.AddAsync(cart);
+                    }
 
-                var cartDTO = MapCartToDTO(cart);
-                return new ApiResponse<CartResponse>(200, cartDTO);
+                    var existingCartItem = cart.CartItems.FirstOrDefault(ci => ci.ProductId == addToCartDTO.ProductId);
+                    if (existingCartItem != null)
+                    {
+                        if (existingCartItem.Quantity + addToCartDTO.Quantity > product.StockQuantity)
+                        {
+                            return new ApiResponse<CartResponse>(400, $"Adding {addToCartDTO.Quantity} exceeds available stock.");
+                        }
+
+                        existingCartItem.Quantity += addToCartDTO.Quantity;
+                        existingCartItem.TotalPrice = (existingCartItem.UnitPrice - existingCartItem.Discount) * existingCartItem.Quantity;
+                        existingCartItem.UpdatedAt = DateTime.UtcNow;
+
+                        await _cartItemRepository.UpdateAsync(existingCartItem);
+                    }
+                    else
+                    {
+                        var discount = product.DiscountPercentage > 0 ? product.Price * product.DiscountPercentage / 100 : 0;
+
+                        var cartItem = new CartItem
+                        {
+                            CartId = cart.Id,
+                            ProductId = product.Id,
+                            Quantity = addToCartDTO.Quantity,
+                            UnitPrice = product.Price,
+                            Discount = discount,
+                            TotalPrice = (product.Price - discount) * addToCartDTO.Quantity,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+
+                        await _cartItemRepository.AddAsync(cartItem);
+                    }
+
+                    cart.UpdatedAt = DateTime.UtcNow;
+                    await _cartRepository.UpdateAsync(cart);
+
+                    cart = await _cartRepository.GetByIdWithItemsAsync(cart.Id) ?? new Cart();
+
+                    var cartDTO = MapCartToDTO(cart);
+                    return new ApiResponse<CartResponse>(200, cartDTO);
+                });
             }
             catch (Exception ex)
             {
@@ -137,37 +140,40 @@ namespace ECommerceApp.Services
         {
             try
             {
-                var cart = await _cartRepository.GetActiveCartByCustomerIdAsync(updateCartItemDTO.CustomerId);
-
-                if (cart == null)
+                return await _cartRepository.ExecuteInTransactionAsync(async () =>
                 {
-                    return new ApiResponse<CartResponse>(404, "Active cart not found.");
-                }
+                    var cart = await _cartRepository.GetActiveCartByCustomerIdAsync(updateCartItemDTO.CustomerId);
 
-                var cartItem = cart.CartItems.FirstOrDefault(ci => ci.Id == updateCartItemDTO.CartItemId);
-                if (cartItem == null)
-                {
-                    return new ApiResponse<CartResponse>(404, "Cart item not found.");
-                }
+                    if (cart == null)
+                    {
+                        return new ApiResponse<CartResponse>(404, "Active cart not found.");
+                    }
 
-                if (updateCartItemDTO.Quantity > cartItem.Product.StockQuantity)
-                {
-                    return new ApiResponse<CartResponse>(400, $"Only {cartItem.Product.StockQuantity} units of {cartItem.Product.Name} are available.");
-                }
+                    var cartItem = cart.CartItems.FirstOrDefault(ci => ci.Id == updateCartItemDTO.CartItemId);
+                    if (cartItem == null)
+                    {
+                        return new ApiResponse<CartResponse>(404, "Cart item not found.");
+                    }
 
-                cartItem.Quantity = updateCartItemDTO.Quantity;
-                cartItem.TotalPrice = (cartItem.UnitPrice - cartItem.Discount) * cartItem.Quantity;
-                cartItem.UpdatedAt = DateTime.UtcNow;
+                    if (updateCartItemDTO.Quantity > cartItem.Product.StockQuantity)
+                    {
+                        return new ApiResponse<CartResponse>(400, $"Only {cartItem.Product.StockQuantity} units of {cartItem.Product.Name} are available.");
+                    }
 
-                await _cartItemRepository.UpdateAsync(cartItem);
+                    cartItem.Quantity = updateCartItemDTO.Quantity;
+                    cartItem.TotalPrice = (cartItem.UnitPrice - cartItem.Discount) * cartItem.Quantity;
+                    cartItem.UpdatedAt = DateTime.UtcNow;
 
-                cart.UpdatedAt = DateTime.UtcNow;
-                await _cartRepository.UpdateAsync(cart);
+                    await _cartItemRepository.UpdateAsync(cartItem);
 
-                cart = await _cartRepository.GetByIdWithItemsAsync(cart.Id) ?? new Cart();
+                    cart.UpdatedAt = DateTime.UtcNow;
+                    await _cartRepository.UpdateAsync(cart);
 
-                var cartDTO = MapCartToDTO(cart);
-                return new ApiResponse<CartResponse>(200, cartDTO);
+                    cart = await _cartRepository.GetByIdWithItemsAsync(cart.Id) ?? new Cart();
+
+                    var cartDTO = MapCartToDTO(cart);
+                    return new ApiResponse<CartResponse>(200, cartDTO);
+                });
             }
             catch (Exception ex)
             {
@@ -179,28 +185,31 @@ namespace ECommerceApp.Services
         {
             try
             {
-                var cart = await _cartRepository.GetActiveCartByCustomerIdAsync(removeCartItemDTO.CustomerId);
-
-                if (cart == null)
+                return await _cartRepository.ExecuteInTransactionAsync(async () =>
                 {
-                    return new ApiResponse<CartResponse>(404, "Active cart not found.");
-                }
+                    var cart = await _cartRepository.GetActiveCartByCustomerIdAsync(removeCartItemDTO.CustomerId);
 
-                var cartItem = cart.CartItems.FirstOrDefault(ci => ci.Id == removeCartItemDTO.CartItemId);
-                if (cartItem == null)
-                {
-                    return new ApiResponse<CartResponse>(404, "Cart item not found.");
-                }
+                    if (cart == null)
+                    {
+                        return new ApiResponse<CartResponse>(404, "Active cart not found.");
+                    }
 
-                await _cartItemRepository.RemoveAsync(cartItem);
-                cart.UpdatedAt = DateTime.UtcNow;
-                await _cartRepository.UpdateAsync(cart);
+                    var cartItem = cart.CartItems.FirstOrDefault(ci => ci.Id == removeCartItemDTO.CartItemId);
+                    if (cartItem == null)
+                    {
+                        return new ApiResponse<CartResponse>(404, "Cart item not found.");
+                    }
 
-                cart = await _cartRepository.GetByIdWithItemsAsync(cart.Id) ?? new Cart();
+                    await _cartItemRepository.RemoveAsync(cartItem);
+                    cart.UpdatedAt = DateTime.UtcNow;
+                    await _cartRepository.UpdateAsync(cart);
 
-                // Map the updated cart to the DTO.
-                var cartDTO = MapCartToDTO(cart);
-                return new ApiResponse<CartResponse>(200, cartDTO);
+                    cart = await _cartRepository.GetByIdWithItemsAsync(cart.Id) ?? new Cart();
+
+                    // Map the updated cart to the DTO.
+                    var cartDTO = MapCartToDTO(cart);
+                    return new ApiResponse<CartResponse>(200, cartDTO);
+                });
             }
             catch (Exception ex)
             {
@@ -212,26 +221,29 @@ namespace ECommerceApp.Services
         {
             try
             {
-                var cart = await _cartRepository.GetActiveCartByCustomerIdAsync(customerId);
-
-                if (cart == null)
+                return await _cartRepository.ExecuteInTransactionAsync(async () =>
                 {
-                    return new ApiResponse<ConfirmationResponse>(404, "Active cart not found.");
-                }
+                    var cart = await _cartRepository.GetActiveCartByCustomerIdAsync(customerId);
 
-                if (cart.CartItems.Any())
-                {
-                    await _cartItemRepository.RemoveRangeAsync(cart.CartItems);
-                    cart.UpdatedAt = DateTime.UtcNow;
-                    await _cartRepository.UpdateAsync(cart);
-                }
+                    if (cart == null)
+                    {
+                        return new ApiResponse<ConfirmationResponse>(404, "Active cart not found.");
+                    }
 
-                var confirmation = new ConfirmationResponse
-                {
-                    Message = "Cart has been cleared successfully."
-                };
+                    if (cart.CartItems.Any())
+                    {
+                        await _cartItemRepository.RemoveRangeAsync(cart.CartItems);
+                        cart.UpdatedAt = DateTime.UtcNow;
+                        await _cartRepository.UpdateAsync(cart);
+                    }
 
-                return new ApiResponse<ConfirmationResponse>(200, confirmation);
+                    var confirmation = new ConfirmationResponse
+                    {
+                        Message = "Cart has been cleared successfully."
+                    };
+
+                    return new ApiResponse<ConfirmationResponse>(200, confirmation);
+                });
             }
             catch (Exception ex)
             {

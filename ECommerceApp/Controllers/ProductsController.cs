@@ -90,7 +90,7 @@ namespace ECommerceApp.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPut("UpdateProductStatus")]
-        public async Task<ActionResult<ApiResponse<ConfirmationResponse>>> UpdateProductStatus(ProductStatusUpdateRequest productStatusUpdateDTO)
+        public async Task<ActionResult<ApiResponse<ConfirmationResponse>>> UpdateProductStatus([FromBody] ProductStatusUpdateRequest productStatusUpdateDTO)
         {
             var response = await _productService.UpdateProductStatusAsync(productStatusUpdateDTO);
             if (response.StatusCode != 200)

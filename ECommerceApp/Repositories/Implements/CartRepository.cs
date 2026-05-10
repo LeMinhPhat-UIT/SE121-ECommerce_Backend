@@ -30,6 +30,23 @@ namespace ECommerceApp.Repositories.Implements
                 .FirstOrDefaultAsync(cart => cart.Id == cartId);
         }
 
+        public async Task<TResult> ExecuteInTransactionAsync<TResult>(Func<Task<TResult>> action)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                var result = await action();
+                await transaction.CommitAsync();
+                return result;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
         public async Task AddAsync(Cart cart)
         {
             await _context.Carts.AddAsync(cart);

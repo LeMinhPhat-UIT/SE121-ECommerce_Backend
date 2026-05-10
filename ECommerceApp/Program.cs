@@ -1,7 +1,6 @@
 using ECommerceApp.Data;
 using ECommerceApp.Repositories.Implements;
 using ECommerceApp.Repositories.Interfaces;
-using ECommerceApp.Services;
 using ECommerceApp.Services.Implements;
 using ECommerceApp.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -19,8 +18,57 @@ using ECommerceApp.Mappings.Payments;
 using ECommerceApp.Mappings.Products;
 using ECommerceApp.Mappings.Refunds;
 using ECommerceApp.Middlewares;
+using Elasticsearch.Net;
+using Serilog;
+using Serilog.Sinks.Elasticsearch;
+using Serilog.Enrichers;
+using System.Reflection;
+using System;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+{
+    ["Serilog:Properties:Application"] = builder.Configuration["SERILOG_APPLICATION"],
+    ["Serilog:Properties:Server"] = builder.Configuration["SERILOG_SERVER"],
+    ["Serilog:MinimumLevel:Default"] = builder.Configuration["SERILOG_MINIMUM_LEVEL"],
+    ["Serilog:MinimumLevel:Override:Microsoft"] = builder.Configuration["SERILOG_MINIMUM_LEVEL_MICROSOFT"],
+    ["Serilog:MinimumLevel:Override:System"] = builder.Configuration["SERILOG_MINIMUM_LEVEL_SYSTEM"]
+});
+
+var elasticUri = builder.Configuration["SERILOG_ELASTIC_URI"] ?? "http://elasticsearch:9200";
+var elasticIndexFormat = builder.Configuration["SERILOG_ELASTIC_INDEX_FORMAT"] ?? "ecommerceapp-logs-{0:yyyy.MM}";
+var autoRegisterTemplate = bool.TryParse(builder.Configuration["SERILOG_ELASTIC_AUTO_REGISTER_TEMPLATE"], out var parsedAutoRegisterTemplate) && parsedAutoRegisterTemplate;
+var elasticUsername = builder.Configuration["SERILOG_ELASTIC_USERNAME"];
+var elasticPassword = builder.Configuration["SERILOG_ELASTIC_PASSWORD"];
+var elasticAuthHeader = CreateBasicAuthHeader(elasticUsername, elasticPassword);
+
+builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+{
+    var elasticSinkOptions = new ElasticsearchSinkOptions(new Uri(elasticUri))
+    {
+        AutoRegisterTemplate = autoRegisterTemplate,
+        IndexFormat = elasticIndexFormat
+    };
+
+    if (!string.IsNullOrWhiteSpace(elasticAuthHeader))
+    {
+        elasticSinkOptions.ModifyConnectionSettings = connectionConfiguration => connectionConfiguration.GlobalHeaders(
+            new System.Collections.Specialized.NameValueCollection
+            {
+                ["Authorization"] = elasticAuthHeader
+            });
+    }
+
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext()
+        .Enrich.WithMachineName()
+        .Enrich.WithEnvironmentName()
+        .Enrich.WithProperty("Application", context.Configuration["Serilog:Properties:Application"] ?? "ECommerceApp")
+        .Enrich.WithProperty("Server", context.Configuration["Serilog:Properties:Server"] ?? Environment.MachineName)
+        .WriteTo.Elasticsearch(elasticSinkOptions);
+});
 
 // Add services to the container.
 
@@ -62,6 +110,7 @@ builder.Services.AddScoped<IAddressMapper, AddressMapper>();
 builder.Services.AddScoped<IProductMapper, ProductMapper>();
 builder.Services.AddScoped<ICategoryMapper, CategoryMapper>();
 builder.Services.AddScoped<ICustomerMapper, CustomerMapper>();
+// TODO: These mappers support in-progress Order, Payment, Cancellation, Refund, and Feedback features.
 builder.Services.AddScoped<IOrderMapper, OrderMapper>();
 builder.Services.AddScoped<ICartMapper, CartMapper>();
 builder.Services.AddScoped<IFeedbackMapper, FeedbackMapper>();
@@ -82,8 +131,21 @@ app.UseErrorHandlingMiddleware();
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.Run();
+
+static string? CreateBasicAuthHeader(string? userName, string? password)
+{
+    if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
+    {
+        return null;
+    }
+
+    var credentials = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{userName}:{password}"));
+    return $"Basic {credentials}";
+}

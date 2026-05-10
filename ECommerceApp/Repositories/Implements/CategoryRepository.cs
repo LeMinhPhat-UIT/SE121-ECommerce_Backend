@@ -25,19 +25,27 @@ namespace ECommerceApp.Repositories.Implements
 
         public async Task<bool> ExistsByIdAsync(int id)
         {
-            return await _context.Categories.AnyAsync(category => category.Id == id);
+            return await _context.Categories.AnyAsync(category => category.Id == id && category.IsActive);
         }
 
         public async Task<Category?> GetByIdAsync(int id)
         {
-            return await _context.Categories.FirstOrDefaultAsync(category => category.Id == id);
+            return await _context.Categories.FirstOrDefaultAsync(category => category.Id == id && category.IsActive);
         }
 
         public async Task<List<Category>> GetAllAsync()
         {
             return await _context.Categories
                 .AsNoTracking()
+                .Where(category => category.IsActive)
                 .ToListAsync();
+        }
+
+        public IQueryable<Category> QueryAllActive()
+        {
+            return _context.Categories
+                .AsNoTracking()
+                .Where(category => category.IsActive);
         }
 
         public async Task AddAsync(Category category)
