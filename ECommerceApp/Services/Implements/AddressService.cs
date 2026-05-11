@@ -1,7 +1,6 @@
 using ECommerceApp.Commons;
 using ECommerceApp.DTOs;
 using ECommerceApp.DTOs.AddressDTOs;
-using ECommerceApp.DTOs.AddressesDTOs;
 using ECommerceApp.Entities;
 using ECommerceApp.Mappings.Addresses;
 using ECommerceApp.Repositories.Interfaces;

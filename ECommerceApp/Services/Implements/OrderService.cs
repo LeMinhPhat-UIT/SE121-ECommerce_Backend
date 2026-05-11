@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using ECommerceApp.Commons;
 using ECommerceApp.DTOs.OrderDTOs;
-using ECommerceApp.Entites;
 using ECommerceApp.Entities;
 using ECommerceApp.Enums;
 using ECommerceApp.Repositories.Interfaces;

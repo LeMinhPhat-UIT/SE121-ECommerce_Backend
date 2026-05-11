@@ -29,7 +29,7 @@ namespace ECommerceApp.Repositories.Implements
         
         public async Task<TResult> ExecuteInTransactionAsync<TResult>(Func<Task<TResult>> action)
         {
-            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync();
 
             try
             {
