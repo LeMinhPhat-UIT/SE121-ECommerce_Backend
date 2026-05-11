@@ -1,6 +1,6 @@
 using System.Globalization;
 using ECommerceApp.Data;
-using ECommerceApp.Entites;
+using ECommerceApp.Entities;
 using ECommerceApp.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,6 +41,14 @@ namespace ECommerceApp.Repositories.Implements
             return await query
                 .Where(address => address.CustomerId == customerId)
                 .ToListAsync();
+        }
+
+        
+        public IQueryable<Address> QueryByCustomerId(int customerId)
+        {
+            return context.Addresses
+                .AsNoTracking()
+                .Where(address => address.CustomerId == customerId);
         }
 
         public void Add(Address address)

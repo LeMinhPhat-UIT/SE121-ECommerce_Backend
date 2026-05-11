@@ -1,4 +1,4 @@
-﻿using ECommerceApp.Commons;
+using ECommerceApp.Commons;
 using ECommerceApp.DTOs.CustomerDTOs;
 using ECommerceApp.Entities;
 using ECommerceApp.Mappings.Customers;

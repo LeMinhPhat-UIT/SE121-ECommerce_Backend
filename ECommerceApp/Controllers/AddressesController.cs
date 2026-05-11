@@ -1,6 +1,6 @@
 ﻿using ECommerceApp.Commons;
 using ECommerceApp.DTOs;
-using ECommerceApp.DTOs.AddressesDTOs;
+using ECommerceApp.DTOs.AddressDTOs;
 using ECommerceApp.Security;
 using ECommerceApp.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -44,7 +44,13 @@ namespace ECommerceApp.Controllers
         [HttpGet("GetAddressById/{id}")]
         public async Task<ActionResult<ApiResponse<AddressResponse>>> GetAddressById(int id)
         {
-            var response = await _addressService.GetAddressByIdAsync(id);
+            var currentCustomerId = User.GetCustomerId();
+            if (currentCustomerId == null)
+            {
+                return Forbid();
+            }
+
+            var response = await _addressService.GetAddressByIdAsync(id, currentCustomerId.Value, User.IsAdmin());
             if (response.StatusCode != 200)
             {
                 return StatusCode(response.StatusCode, response);

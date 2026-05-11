@@ -10,6 +10,12 @@ services:
       - "${MSSQL_PORT}:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "${MSSQL_SA_PASSWORD}", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   ecommerceapp:
     build:
@@ -17,7 +23,10 @@ services:
       dockerfile: Dockerfile
     container_name: ecommerce-app
     depends_on:
-      - sqlserver
+      sqlserver:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     env_file:
       - .env
     environment:
@@ -34,8 +43,38 @@ services:
       EmailSettings__SenderName: ${EMAILSETTINGS__SENDERNAME}
       EmailSettings__FromEmail: ${EMAILSETTINGS__FROMEMAIL}
       EmailSettings__Password: ${EMAILSETTINGS__PASSWORD}
+      ELASTIC_URI: ${ELASTIC_URI:-http://elasticsearch:9200}
     ports:
       - "${APP_PORT}:8080"
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
+    container_name: ecommerce-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.9.0
+    container_name: ecommerce-kibana
+    depends_on:
+      - elasticsearch
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - xpack.security.enabled=false
+    ports:
+      - "5601:5601"
+
 volumes:
   sqlserver-data:
+  esdata:

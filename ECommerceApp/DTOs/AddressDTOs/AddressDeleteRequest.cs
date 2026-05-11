@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ECommerceApp.DTOs.AddressesDTOs
+namespace ECommerceApp.DTOs.AddressDTOs
 {
     public class AddressDeleteRequest
     {

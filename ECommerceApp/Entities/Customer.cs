@@ -1,4 +1,4 @@
-﻿using ECommerceApp.Entites;
+﻿using ECommerceApp.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.Net;

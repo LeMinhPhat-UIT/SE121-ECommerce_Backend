@@ -1,9 +1,10 @@
-﻿using ECommerceApp.Commons;
+using ECommerceApp.Commons;
 using ECommerceApp.DTOs.CategoryDTOs;
 using ECommerceApp.Entities;
 using ECommerceApp.Mappings.Categories;
 using ECommerceApp.Repositories.Interfaces;
 using ECommerceApp.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceApp.Services.Implements
 {
@@ -107,9 +108,21 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
-                var categories = await unitOfWork.CategoryRepository.GetAllAsync();
+                var safeRequest = new PaginationRequest
+                {
+                    PageIndex = paginationRequest?.PageIndex > 0 ? paginationRequest.PageIndex : 1,
+                    PageSize = paginationRequest?.PageSize > 0 ? paginationRequest.PageSize : 10
+                };
 
-                var categoryList = categories.Select(mapper.Map).ToPagedResult(paginationRequest);
+                var categoryQuery = unitOfWork.CategoryRepository.QueryAllActive();
+                var totalCount = await categoryQuery.CountAsync();
+                
+                var categories = await categoryQuery
+                    .Skip((safeRequest.PageIndex - 1) * safeRequest.PageSize)
+                    .Take(safeRequest.PageSize)
+                    .ToListAsync();
+
+                var categoryList = new PagedResult<CategoryResponse>(categories.Select(mapper.Map), safeRequest, totalCount);
 
                 return new ApiResponse<PagedResult<CategoryResponse>>(200, categoryList);
             }

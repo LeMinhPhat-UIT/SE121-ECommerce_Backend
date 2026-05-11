@@ -1,4 +1,4 @@
-﻿using ECommerceApp.Commons;
+using ECommerceApp.Commons;
 using ECommerceApp.DTOs.ShoppingCartDTOs;
 using ECommerceApp.Entities;
 using ECommerceApp.Mappings.Carts;
@@ -39,6 +39,7 @@ public class ShoppingCartService(
             if (addToCartDto.Quantity > product.StockQuantity)
                 return new ApiResponse<CartResponse>(400, $"Only {product.StockQuantity} units available.");
 
+            // Bật Tracking để EF Core giám sát sự thay đổi
             var cart = await unitOfWork.CartRepository.GetActiveCartByCustomerIdAsync(addToCartDto.CustomerId, trackChanges: true);
 
             if (cart == null)
@@ -76,6 +77,7 @@ public class ShoppingCartService(
 
             cart.UpdatedAt = DateTime.UtcNow;
 
+            // Chốt thay đổi xuống Database
             await unitOfWork.SaveChangesAsync();
 
             var updatedCart = await unitOfWork.CartRepository.GetByIdWithItemsAsync(cart.Id);

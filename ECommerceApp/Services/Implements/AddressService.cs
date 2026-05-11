@@ -1,8 +1,12 @@
-﻿using ECommerceApp.Commons;
+using ECommerceApp.Commons;
+using ECommerceApp.DTOs;
+using ECommerceApp.DTOs.AddressDTOs;
 using ECommerceApp.DTOs.AddressesDTOs;
+using ECommerceApp.Entities;
 using ECommerceApp.Mappings.Addresses;
 using ECommerceApp.Repositories.Interfaces;
 using ECommerceApp.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceApp.Services.Implements;
 
@@ -33,15 +37,20 @@ public class AddressService(IUnitOfWork unitOfWork, IAddressMapper mapper) : IAd
         }
     }
 
-    public async Task<ApiResponse<AddressResponse>> GetAddressByIdAsync(int id)
+    public async Task<ApiResponse<AddressResponse>> GetAddressByIdAsync(int id, int currentCustomerId, bool isAdmin)
     {
         try
         {
-            var address = await unitOfWork.AddressRepository.GetByIdAsync(id);
+            var address = await unitOfWork.AddressRepository.GetByIdAsync(id, trackChanges: false);
 
             if (address == null)
             {
                 return new ApiResponse<AddressResponse>(404, "Address not found.");
+            }
+
+            if (!isAdmin && address.CustomerId != currentCustomerId)
+            {
+                return new ApiResponse<AddressResponse>(403, "You do not have permission to access this address.");
             }
 
             var addressResponse = mapper.Map(address);
@@ -130,11 +139,22 @@ public class AddressService(IUnitOfWork unitOfWork, IAddressMapper mapper) : IAd
                 return new ApiResponse<PagedResult<AddressResponse>>(404, "Customer not found.");
             }
 
-            var addresses = (await unitOfWork.AddressRepository.GetByCustomerIdAsync(customerId))
-                .Select(mapper.Map)
-                .ToPagedResult(paginationRequest);
+            var safeRequest = new PaginationRequest
+            {
+                PageIndex = paginationRequest?.PageIndex > 0 ? paginationRequest.PageIndex : 1,
+                PageSize = paginationRequest?.PageSize > 0 ? paginationRequest.PageSize : 10
+            };
 
-            return new ApiResponse<PagedResult<AddressResponse>>(200, addresses);
+            var addressQuery = unitOfWork.AddressRepository.QueryByCustomerId(customerId);
+            var totalCount = await addressQuery.CountAsync();
+            var addresses = await addressQuery
+                .Skip((safeRequest.PageIndex - 1) * safeRequest.PageSize)
+                .Take(safeRequest.PageSize)
+                .ToListAsync();
+
+            var addressList = new PagedResult<AddressResponse>(addresses.Select(mapper.Map), safeRequest, totalCount);
+
+            return new ApiResponse<PagedResult<AddressResponse>>(200, addressList);
         }
         catch (Exception ex)
         {

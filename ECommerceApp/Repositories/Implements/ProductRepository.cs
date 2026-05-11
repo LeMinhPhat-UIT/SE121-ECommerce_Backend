@@ -1,5 +1,5 @@
 using ECommerceApp.Data;
-using ECommerceApp.Entites;
+using ECommerceApp.Entities;
 using ECommerceApp.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,6 +24,17 @@ namespace ECommerceApp.Repositories.Implements
                 query = query.AsNoTracking();
             }
             
+            return await query.FirstOrDefaultAsync(product => product.Id == id && product.IsAvailable);
+        }
+
+        public async Task<Product?> GetByIdIncludingUnavailableAsync(int id, bool trackChanges = false)
+        {
+            var query = context.Products.AsQueryable();
+            if (!trackChanges)
+            {
+                query = query.AsNoTracking();
+            }
+
             return await query.FirstOrDefaultAsync(product => product.Id == id);
         }
         
@@ -42,6 +53,7 @@ namespace ECommerceApp.Repositories.Implements
         {
             return await context.Products
                 .AsNoTracking()
+                .Where(product => product.IsAvailable)
                 .ToListAsync();
         }
 
@@ -51,6 +63,20 @@ namespace ECommerceApp.Repositories.Implements
                 .AsNoTracking()
                 .Where(product => product.CategoryId == categoryId && product.IsAvailable)
                 .ToListAsync();
+        }
+
+        public IQueryable<Product> QueryAllAvailable()
+        {
+            return context.Products
+                .AsNoTracking()
+                .Where(product => product.IsAvailable);
+        }
+
+        public IQueryable<Product> QueryByCategory(int categoryId)
+        {
+            return context.Products
+                .AsNoTracking()
+                .Where(product => product.CategoryId == categoryId && product.IsAvailable);
         }
 
         public void Add(Product product)

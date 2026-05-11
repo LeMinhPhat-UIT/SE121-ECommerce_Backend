@@ -1,5 +1,5 @@
-using ECommerceApp.DTOs.AddressesDTOs;
-using ECommerceApp.Entites;
+using ECommerceApp.DTOs.AddressDTOs;
+using ECommerceApp.Entities;
 using Riok.Mapperly.Abstractions;
 
 namespace ECommerceApp.Mappings.Addresses

@@ -18,7 +18,7 @@ namespace ECommerceApp.Repositories.Implements
 
         public async Task<bool> ExistsByIdAsync(int id)
         {
-            return await context.Categories.AnyAsync(category => category.Id == id);
+            return await context.Categories.AnyAsync(category => category.Id == id && category.IsActive);
         }
 
         public async Task<Category?> GetByIdAsync(int id, bool trackChanges = false)
@@ -29,14 +29,22 @@ namespace ECommerceApp.Repositories.Implements
                 query = query.AsNoTracking();
             }
             
-            return await query.FirstOrDefaultAsync(category => category.Id == id);
+            return await query.FirstOrDefaultAsync(category => category.Id == id && category.IsActive);
         }
 
         public async Task<List<Category>> GetAllAsync()
         {
             return await context.Categories
                 .AsNoTracking()
+                .Where(category => category.IsActive)
                 .ToListAsync();
+        }
+
+        public IQueryable<Category> QueryAllActive()
+        {
+            return context.Categories
+                .AsNoTracking()
+                .Where(category => category.IsActive);
         }
 
         public void Add(Category category)
