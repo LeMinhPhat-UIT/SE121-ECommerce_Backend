@@ -14,6 +14,7 @@ public interface IUnitOfWork : IDisposable
     IPaymentRepository PaymentRepository { get; }
     ICancellationRepository CancellationRepository { get; }
     IFeedbackRepository FeedbackRepository { get; }
+    IRefundRepository RefundRepository { get; }
     
     Task<int> SaveChangesAsync();
     

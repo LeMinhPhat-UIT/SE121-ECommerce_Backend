@@ -8,5 +8,8 @@ public interface ICancellationRepository
     Task<Cancellation?> GetByIdAsync(int id, bool trackChanges = false);
     Task<Cancellation?> GetByIdWithFullOrderDetailsAsync(int id, bool trackChanges = false);
     Task<List<Cancellation>> GetAllWithOrderAsync(bool trackChanges = false);
+    Task<List<Cancellation>> GetApprovedCancellationsPendingRefundAsync(bool trackChanges = false);
+    Task<Cancellation?> GetByIdWithFullDetailsAsync(int id, bool trackChanges = false);
     void Add(Cancellation cancellation);
+    
 }

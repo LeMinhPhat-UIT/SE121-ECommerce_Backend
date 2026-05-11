@@ -1,5 +1,6 @@
 using ECommerceApp.Data;
 using ECommerceApp.Entities;
+using ECommerceApp.Enums;
 using ECommerceApp.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -57,6 +58,38 @@ public class CancellationRepository(ApplicationDbContext context) : ICancellatio
         return await query
             .Include(c => c.Order) 
             .ToListAsync();
+    }
+    
+    public async Task<List<Cancellation>> GetApprovedCancellationsPendingRefundAsync(bool trackChanges = false)
+    {
+        var query = context.Cancellations.AsQueryable();
+
+        if (!trackChanges)
+        {
+            query = query.AsNoTracking();
+        }
+
+        return await query
+            .Include(c => c.Order)
+            .ThenInclude(o => o.Payment)
+            .Where(c => c.Status == CancellationStatus.Approved 
+                        && c.Refund == null 
+                        && c.Order.Payment != null 
+                        && c.Order.Payment.PaymentMethod.ToLower() != "cod")
+            .ToListAsync();
+    }
+    
+    public async Task<Cancellation?> GetByIdWithFullDetailsAsync(int id, bool trackChanges = false)
+    {
+        var query = context.Cancellations.AsQueryable();
+        if (!trackChanges) query = query.AsNoTracking();
+
+        return await query
+            .Include(c => c.Order)
+            .ThenInclude(o => o.Payment)
+            .Include(c => c.Order)
+            .ThenInclude(o => o.Customer)
+            .FirstOrDefaultAsync(c => c.Id == id);
     }
     
     public void Add(Cancellation cancellation)
