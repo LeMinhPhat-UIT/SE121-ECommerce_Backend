@@ -1,4 +1,4 @@
-﻿using ECommerceApp.Commons;
+using ECommerceApp.Commons;
 using ECommerceApp.DTOs.CategoryDTOs;
 using ECommerceApp.Entities;
 using ECommerceApp.Mappings.Categories;
@@ -8,32 +8,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceApp.Services.Implements
 {
-    public class CategoryService : ICategoryService
+    public class CategoryService(IUnitOfWork unitOfWork, ICategoryMapper mapper)
+        : ICategoryService
     {
-        private readonly ICategoryRepository _categoryRepository;
-        private readonly ICategoryMapper _mapper;
-
-        public CategoryService(ICategoryRepository categoryRepository, ICategoryMapper mapper)
-        {
-            _categoryRepository = categoryRepository;
-            _mapper = mapper;
-        }
-
         public async Task<ApiResponse<CategoryResponse>> CreateCategoryAsync(CategoryCreateRequest categoryDto)
         {
             try
             {
-                if (await _categoryRepository.ExistsByNameAsync(categoryDto.Name))
+                if (await unitOfWork.CategoryRepository.ExistsByNameAsync(categoryDto.Name))
                 {
                     return new ApiResponse<CategoryResponse>(400, "Category name already exists.");
                 }
 
-                var category = _mapper.Map(categoryDto);
+                var category = mapper.Map(categoryDto);
                 category.IsActive = true;
 
-                await _categoryRepository.AddAsync(category);
-
-                return new ApiResponse<CategoryResponse>(200, _mapper.Map(category));
+                unitOfWork.CategoryRepository.Add(category);
+                await unitOfWork.SaveChangesAsync();
+                
+                return new ApiResponse<CategoryResponse>(200, mapper.Map(category));
             }
             catch (Exception ex)
             {
@@ -45,14 +38,9 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
-                var category = await _categoryRepository.GetByIdAsync(id);
+                var category = await unitOfWork.CategoryRepository.GetByIdAsync(id);
 
-                if (category == null)
-                {
-                    return new ApiResponse<CategoryResponse>(404, "Category not found.");
-                }
-
-                return new ApiResponse<CategoryResponse>(200, _mapper.Map(category));
+                return category == null ? new ApiResponse<CategoryResponse>(404, "Category not found.") : new ApiResponse<CategoryResponse>(200, mapper.Map(category));
             }
             catch (Exception ex)
             {
@@ -64,13 +52,13 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
-                var category = await _categoryRepository.GetByIdAsync(categoryDto.Id);
+                var category = await unitOfWork.CategoryRepository.GetByIdAsync(categoryDto.Id, true);
                 if (category == null)
                 {
                     return new ApiResponse<ConfirmationResponse>(404, "Category not found.");
                 }
 
-                if (await _categoryRepository.ExistsByNameAsync(categoryDto.Name, categoryDto.Id))
+                if (await unitOfWork.CategoryRepository.ExistsByNameAsync(categoryDto.Name, categoryDto.Id))
                 {
                     return new ApiResponse<ConfirmationResponse>(400, "Another category with the same name already exists.");
                 }
@@ -78,7 +66,7 @@ namespace ECommerceApp.Services.Implements
                 category.Name = categoryDto.Name;
                 category.Description = categoryDto.Description;
 
-                await _categoryRepository.UpdateAsync(category);
+                await unitOfWork.SaveChangesAsync();
 
                 return new ApiResponse<ConfirmationResponse>(200, new ConfirmationResponse
                 {
@@ -95,7 +83,7 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
-                var category = await _categoryRepository.GetByIdAsync(id);
+                var category = await unitOfWork.CategoryRepository.GetByIdAsync(id, true);
 
                 if (category == null)
                 {
@@ -103,7 +91,7 @@ namespace ECommerceApp.Services.Implements
                 }
 
                 category.IsActive = false;
-                await _categoryRepository.UpdateAsync(category);
+                await unitOfWork.SaveChangesAsync();
 
                 return new ApiResponse<ConfirmationResponse>(200, new ConfirmationResponse
                 {
@@ -126,14 +114,15 @@ namespace ECommerceApp.Services.Implements
                     PageSize = paginationRequest?.PageSize > 0 ? paginationRequest.PageSize : 10
                 };
 
-                var categoryQuery = _categoryRepository.QueryAllActive();
+                var categoryQuery = unitOfWork.CategoryRepository.QueryAllActive();
                 var totalCount = await categoryQuery.CountAsync();
+                
                 var categories = await categoryQuery
                     .Skip((safeRequest.PageIndex - 1) * safeRequest.PageSize)
                     .Take(safeRequest.PageSize)
                     .ToListAsync();
 
-                var categoryList = new PagedResult<CategoryResponse>(categories.Select(_mapper.Map), safeRequest, totalCount);
+                var categoryList = new PagedResult<CategoryResponse>(categories.Select(mapper.Map), safeRequest, totalCount);
 
                 return new ApiResponse<PagedResult<CategoryResponse>>(200, categoryList);
             }

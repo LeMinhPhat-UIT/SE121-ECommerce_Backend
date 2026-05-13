@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 namespace ECommerceApp.DTOs.PaymentDTOs
 {
-    public class CODPaymentUpdateDTO
+    public class CODPaymentUpdateRequest
     {
         [Required(ErrorMessage = "Order ID is required.")]
         public int OrderId { get; set; }

@@ -1,5 +1,4 @@
-﻿using ECommerceApp.Commons;
-using ECommerceApp.DTOs;
+using ECommerceApp.Commons;
 using ECommerceApp.DTOs.ProductDTOs;
 using ECommerceApp.Entities;
 using ECommerceApp.Mappings.Products;
@@ -9,39 +8,33 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceApp.Services.Implements
 {
-    public class ProductService : IProductService
+    public class ProductService(
+        IUnitOfWork unitOfWork,
+        IProductMapper mapper)
+        : IProductService
     {
-        private readonly IProductRepository _productRepository;
-        private readonly ICategoryRepository _categoryRepository;
-        private readonly IProductMapper _mapper;
-
-        public ProductService(IProductRepository productRepository, ICategoryRepository categoryRepository, IProductMapper mapper)
-        {
-            _productRepository = productRepository;
-            _categoryRepository = categoryRepository;
-            _mapper = mapper;
-        }
-
         public async Task<ApiResponse<ProductResponse>> CreateProductAsync(ProductCreateRequest productDto)
         {
             try
             {
-                if (await _productRepository.ExistsByNameAsync(productDto.Name))
+                if (await unitOfWork.ProductRepository.ExistsByNameAsync(productDto.Name))
                 {
                     return new ApiResponse<ProductResponse>(400, "Product name already exists.");
                 }
 
-                if (!await _categoryRepository.ExistsByIdAsync(productDto.CategoryId))
+                if (!await unitOfWork.CategoryRepository.ExistsByIdAsync(productDto.CategoryId))
                 {
                     return new ApiResponse<ProductResponse>(400, "Specified category does not exist.");
                 }
 
-                var product = _mapper.Map(productDto);
+                var product = mapper.Map(productDto);
                 product.IsAvailable = true;
 
-                await _productRepository.AddAsync(product);
-
-                return new ApiResponse<ProductResponse>(200, _mapper.Map(product));
+                
+                unitOfWork.ProductRepository.Add(product);
+                await unitOfWork.SaveChangesAsync();
+                    
+                return new ApiResponse<ProductResponse>(200, mapper.Map(product));
             }
             catch (Exception ex)
             {
@@ -53,14 +46,14 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
-                var product = await _productRepository.GetByIdAsync(id);
+                var product = await unitOfWork.ProductRepository.GetByIdAsync(id);
 
                 if (product == null)
                 {
                     return new ApiResponse<ProductResponse>(404, "Product not found.");
                 }
 
-                return new ApiResponse<ProductResponse>(200, _mapper.Map(product));
+                return new ApiResponse<ProductResponse>(200, mapper.Map(product));
             }
             catch (Exception ex)
             {
@@ -72,18 +65,18 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
-                var product = await _productRepository.GetByIdAsync(productDto.Id);
+                var product = await unitOfWork.ProductRepository.GetByIdAsync(productDto.Id, true);
                 if (product == null)
                 {
                     return new ApiResponse<ConfirmationResponse>(404, "Product not found.");
                 }
 
-                if (await _productRepository.ExistsByNameAsync(productDto.Name, productDto.Id))
+                if (await unitOfWork.ProductRepository.ExistsByNameAsync(productDto.Name, productDto.Id))
                 {
                     return new ApiResponse<ConfirmationResponse>(400, "Another product with the same name already exists.");
                 }
 
-                if (!await _categoryRepository.ExistsByIdAsync(productDto.CategoryId))
+                if (!await unitOfWork.CategoryRepository.ExistsByIdAsync(productDto.CategoryId))
                 {
                     return new ApiResponse<ConfirmationResponse>(400, "Specified category does not exist.");
                 }
@@ -96,8 +89,8 @@ namespace ECommerceApp.Services.Implements
                 product.DiscountPercentage = productDto.DiscountPercentage;
                 product.CategoryId = productDto.CategoryId;
 
-                await _productRepository.UpdateAsync(product);
-
+                await unitOfWork.SaveChangesAsync();
+                
                 return new ApiResponse<ConfirmationResponse>(200, new ConfirmationResponse
                 {
                     Message = $"Product with Id {productDto.Id} updated successfully."
@@ -113,7 +106,7 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
-                var product = await _productRepository.GetByIdIncludingUnavailableAsync(id);
+                var product = await unitOfWork.ProductRepository.GetByIdIncludingUnavailableAsync(id, trackChanges: true);
 
                 if (product == null)
                 {
@@ -121,8 +114,9 @@ namespace ECommerceApp.Services.Implements
                 }
 
                 product.IsAvailable = false;
-                await _productRepository.UpdateAsync(product);
 
+                await unitOfWork.SaveChangesAsync();
+                
                 return new ApiResponse<ConfirmationResponse>(200, new ConfirmationResponse
                 {
                     Message = $"Product with Id {id} deleted successfully."
@@ -144,14 +138,14 @@ namespace ECommerceApp.Services.Implements
                     PageSize = paginationRequest?.PageSize > 0 ? paginationRequest.PageSize : 10
                 };
 
-                var productQuery = _productRepository.QueryAllAvailable();
+                var productQuery = unitOfWork.ProductRepository.QueryAllAvailable();
                 var totalCount = await productQuery.CountAsync();
                 var products = await productQuery
                     .Skip((safeRequest.PageIndex - 1) * safeRequest.PageSize)
                     .Take(safeRequest.PageSize)
                     .ToListAsync();
 
-                var productList = new PagedResult<ProductResponse>(products.Select(_mapper.Map), safeRequest, totalCount);
+                var productList = new PagedResult<ProductResponse>(products.Select(mapper.Map), safeRequest, totalCount);
 
                 return new ApiResponse<PagedResult<ProductResponse>>(200, productList);
             }
@@ -171,7 +165,7 @@ namespace ECommerceApp.Services.Implements
                     PageSize = paginationRequest?.PageSize > 0 ? paginationRequest.PageSize : 10
                 };
 
-                var productQuery = _productRepository.QueryByCategory(categoryId);
+                var productQuery = unitOfWork.ProductRepository.QueryByCategory(categoryId);
                 var totalCount = await productQuery.CountAsync();
 
                 if (totalCount == 0)
@@ -184,7 +178,7 @@ namespace ECommerceApp.Services.Implements
                     .Take(safeRequest.PageSize)
                     .ToListAsync();
 
-                var productList = new PagedResult<ProductResponse>(products.Select(_mapper.Map), safeRequest, totalCount);
+                var productList = new PagedResult<ProductResponse>(products.Select(mapper.Map), safeRequest, totalCount);
 
                 return new ApiResponse<PagedResult<ProductResponse>>(200, productList);
             }
@@ -194,23 +188,24 @@ namespace ECommerceApp.Services.Implements
             }
         }
 
-        public async Task<ApiResponse<ConfirmationResponse>> UpdateProductStatusAsync(ProductStatusUpdateRequest productStatusUpdateDTO)
+        public async Task<ApiResponse<ConfirmationResponse>> UpdateProductStatusAsync(ProductStatusUpdateRequest productStatusUpdateDto)
         {
             try
             {
-                var product = await _productRepository.GetByIdAsync(productStatusUpdateDTO.ProductId);
+                var product = await unitOfWork.ProductRepository.GetByIdAsync(productStatusUpdateDto.ProductId, true);
 
                 if (product == null)
                 {
                     return new ApiResponse<ConfirmationResponse>(404, "Product not found.");
                 }
 
-                product.IsAvailable = productStatusUpdateDTO.IsAvailable;
-                await _productRepository.UpdateAsync(product);
+                product.IsAvailable = productStatusUpdateDto.IsAvailable;
 
+                await unitOfWork.SaveChangesAsync();
+                
                 return new ApiResponse<ConfirmationResponse>(200, new ConfirmationResponse
                 {
-                    Message = $"Product with Id {productStatusUpdateDTO.ProductId} Status Updated successfully."
+                    Message = $"Product with Id {productStatusUpdateDto.ProductId} Status Updated successfully."
                 });
             }
             catch (Exception ex)

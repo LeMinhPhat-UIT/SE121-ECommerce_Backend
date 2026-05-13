@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ECommerceApp.DTOs.PaymentDTOs
 {
-    public class PaymentStatusUpdateDTO
+    public class PaymentStatusUpdateRequest
     {
         [Required(ErrorMessage = "Payment ID is required.")]
         public int PaymentId { get; set; }

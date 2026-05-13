@@ -5,37 +5,53 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceApp.Repositories.Implements
 {
-    public class ProductRepository : IProductRepository
+    public class ProductRepository(ApplicationDbContext context) : IProductRepository
     {
-        private readonly ApplicationDbContext _context;
-
-        public ProductRepository(ApplicationDbContext context)
-        {
-            _context = context;
-        }
-
         public async Task<bool> ExistsByNameAsync(string name, int? excludeProductId = null)
         {
             var normalizedName = name.Trim().ToLower();
 
-            return await _context.Products.AnyAsync(product =>
+            return await context.Products.AnyAsync(product =>
                 product.Name.ToLower() == normalizedName &&
                 (!excludeProductId.HasValue || product.Id != excludeProductId.Value));
         }
 
-        public async Task<Product?> GetByIdAsync(int id)
+        public async Task<Product?> GetByIdAsync(int id, bool trackChanges = false)
         {
-            return await _context.Products.FirstOrDefaultAsync(product => product.Id == id && product.IsAvailable);
+            var query = context.Products.AsQueryable();
+            if (!trackChanges)
+            {
+                query = query.AsNoTracking();
+            }
+            
+            return await query.FirstOrDefaultAsync(product => product.Id == id && product.IsAvailable);
         }
 
-        public async Task<Product?> GetByIdIncludingUnavailableAsync(int id)
+        public async Task<Product?> GetByIdIncludingUnavailableAsync(int id, bool trackChanges = false)
         {
-            return await _context.Products.FirstOrDefaultAsync(product => product.Id == id);
+            var query = context.Products.AsQueryable();
+            if (!trackChanges)
+            {
+                query = query.AsNoTracking();
+            }
+
+            return await query.FirstOrDefaultAsync(product => product.Id == id);
+        }
+        
+        public async Task<List<Product>> GetByIdsAsync(IEnumerable<int> ids, bool trackChanges = false)
+        {
+            var query = context.Products.AsQueryable();
+            if (!trackChanges)
+            {
+                query = query.AsNoTracking();
+            }
+    
+            return await query.Where(p => ids.Contains(p.Id)).ToListAsync();
         }
 
         public async Task<List<Product>> GetAllAsync()
         {
-            return await _context.Products
+            return await context.Products
                 .AsNoTracking()
                 .Where(product => product.IsAvailable)
                 .ToListAsync();
@@ -43,7 +59,7 @@ namespace ECommerceApp.Repositories.Implements
 
         public async Task<List<Product>> GetByCategoryAsync(int categoryId)
         {
-            return await _context.Products
+            return await context.Products
                 .AsNoTracking()
                 .Where(product => product.CategoryId == categoryId && product.IsAvailable)
                 .ToListAsync();
@@ -51,28 +67,35 @@ namespace ECommerceApp.Repositories.Implements
 
         public IQueryable<Product> QueryAllAvailable()
         {
-            return _context.Products
+            return context.Products
                 .AsNoTracking()
                 .Where(product => product.IsAvailable);
         }
 
         public IQueryable<Product> QueryByCategory(int categoryId)
         {
-            return _context.Products
+            return context.Products
                 .AsNoTracking()
                 .Where(product => product.CategoryId == categoryId && product.IsAvailable);
         }
 
-        public async Task AddAsync(Product product)
+        public void Add(Product product)
         {
-            await _context.Products.AddAsync(product);
-            await _context.SaveChangesAsync();
+            context.Products.Add(product);
         }
 
-        public async Task UpdateAsync(Product product)
+        public void Update(Product product)
         {
-            _context.Products.Update(product);
-            await _context.SaveChangesAsync();
+            context.Products.Update(product);
+        }
+        
+        public async Task<bool> DeductStockAsync(int productId, int quantity)
+        {
+            var rowsAffected = await context.Products
+                .Where(p => p.Id == productId && p.StockQuantity >= quantity)
+                .ExecuteUpdateAsync(s => s.SetProperty(p => p.StockQuantity, p => p.StockQuantity - quantity));
+
+            return rowsAffected > 0;
         }
     }
 }

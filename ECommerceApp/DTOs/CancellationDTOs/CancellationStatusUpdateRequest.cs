@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 namespace ECommerceApp.DTOs.CancellationDTOs
 {
-    public class CancellationStatusUpdateDTO
+    public class CancellationStatusUpdateRequest
     {
         [Required(ErrorMessage = "Cancellation ID is required.")]
         public int CancellationId { get; set; }

@@ -6,7 +6,7 @@ namespace ECommerceApp.Mappings.Payments
 {
     public interface IPaymentMapper
     {
-        PaymentResponseDTO Map(Payment source);
+        PaymentResponse Map(Payment source);
 
         Payment Map(PaymentRequest source);
     }
@@ -14,7 +14,7 @@ namespace ECommerceApp.Mappings.Payments
     [Mapper]
     public partial class PaymentMapper : IPaymentMapper
     {
-        public partial PaymentResponseDTO Map(Payment source);
+        public partial PaymentResponse Map(Payment source);
 
         public partial Payment Map(PaymentRequest source);
     }

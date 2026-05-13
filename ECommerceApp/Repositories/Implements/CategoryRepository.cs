@@ -5,37 +5,36 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceApp.Repositories.Implements
 {
-    public class CategoryRepository : ICategoryRepository
+    public class CategoryRepository(ApplicationDbContext context) : ICategoryRepository
     {
-        private readonly ApplicationDbContext _context;
-
-        public CategoryRepository(ApplicationDbContext context)
-        {
-            _context = context;
-        }
-
         public async Task<bool> ExistsByNameAsync(string name, int? excludeCategoryId = null)
         {
             var normalizedName = name.Trim().ToLower();
 
-            return await _context.Categories.AnyAsync(category =>
+            return await context.Categories.AnyAsync(category =>
                 category.Name.ToLower() == normalizedName &&
                 (!excludeCategoryId.HasValue || category.Id != excludeCategoryId.Value));
         }
 
         public async Task<bool> ExistsByIdAsync(int id)
         {
-            return await _context.Categories.AnyAsync(category => category.Id == id && category.IsActive);
+            return await context.Categories.AnyAsync(category => category.Id == id && category.IsActive);
         }
 
-        public async Task<Category?> GetByIdAsync(int id)
+        public async Task<Category?> GetByIdAsync(int id, bool trackChanges = false)
         {
-            return await _context.Categories.FirstOrDefaultAsync(category => category.Id == id && category.IsActive);
+            var query = context.Categories.AsQueryable();
+            if (!trackChanges)
+            {
+                query = query.AsNoTracking();
+            }
+            
+            return await query.FirstOrDefaultAsync(category => category.Id == id && category.IsActive);
         }
 
         public async Task<List<Category>> GetAllAsync()
         {
-            return await _context.Categories
+            return await context.Categories
                 .AsNoTracking()
                 .Where(category => category.IsActive)
                 .ToListAsync();
@@ -43,21 +42,19 @@ namespace ECommerceApp.Repositories.Implements
 
         public IQueryable<Category> QueryAllActive()
         {
-            return _context.Categories
+            return context.Categories
                 .AsNoTracking()
                 .Where(category => category.IsActive);
         }
 
-        public async Task AddAsync(Category category)
+        public void Add(Category category)
         {
-            await _context.Categories.AddAsync(category);
-            await _context.SaveChangesAsync();
+            context.Categories.Add(category);
         }
 
-        public async Task UpdateAsync(Category category)
+        public void Update(Category category)
         {
-            _context.Categories.Update(category);
-            await _context.SaveChangesAsync();
+            context.Categories.Update(category);
         }
     }
 }
