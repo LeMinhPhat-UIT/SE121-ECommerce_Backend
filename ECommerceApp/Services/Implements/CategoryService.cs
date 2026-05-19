@@ -3,12 +3,20 @@ using ECommerceApp.DTOs.CategoryDTOs;
 using ECommerceApp.Entities;
 using ECommerceApp.Mappings.Categories;
 using ECommerceApp.Repositories.Interfaces;
+using ECommerceApp.Services.Caching;
 using ECommerceApp.Services.Interfaces;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceApp.Services.Implements
 {
-    public class CategoryService(IUnitOfWork unitOfWork, ICategoryMapper mapper)
+    public class CategoryService(
+        IUnitOfWork unitOfWork,
+        ICategoryMapper mapper,
+        IDistributedCache cache,
+        IOptions<CacheOptions> cacheOptions,
+        ILogger<CategoryService> logger)
         : ICategoryService
     {
         public async Task<ApiResponse<CategoryResponse>> CreateCategoryAsync(CategoryCreateRequest categoryDto)
@@ -25,11 +33,13 @@ namespace ECommerceApp.Services.Implements
 
                 unitOfWork.CategoryRepository.Add(category);
                 await unitOfWork.SaveChangesAsync();
+                await RefreshCategoryCacheAsync();
                 
                 return new ApiResponse<CategoryResponse>(200, mapper.Map(category));
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in CategoryService.");
                 return new ApiResponse<CategoryResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -38,12 +48,38 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
+                if (cacheOptions.Value.Enabled)
+                {
+                    var version = await cache.GetVersionAsync(CatalogCacheKeys.CategoryVersion, logger);
+                    var cacheKey = CatalogCacheKeys.CategoryById(id, version);
+                    var cachedCategory = await cache.GetJsonAsync<CategoryResponse>(cacheKey, logger);
+                    if (cachedCategory != null)
+                    {
+                        logger.LogInformation("Category {CategoryId} served from cache.", id);
+                        return new ApiResponse<CategoryResponse>(200, cachedCategory);
+                    }
+                }
+
                 var category = await unitOfWork.CategoryRepository.GetByIdAsync(id);
 
-                return category == null ? new ApiResponse<CategoryResponse>(404, "Category not found.") : new ApiResponse<CategoryResponse>(200, mapper.Map(category));
+                if (category == null)
+                {
+                    return new ApiResponse<CategoryResponse>(404, "Category not found.");
+                }
+
+                var categoryResponse = mapper.Map(category);
+                if (cacheOptions.Value.Enabled)
+                {
+                    var version = await cache.GetVersionAsync(CatalogCacheKeys.CategoryVersion, logger);
+                    var cacheKey = CatalogCacheKeys.CategoryById(id, version);
+                    await cache.SetJsonAsync(cacheKey, categoryResponse, GetCatalogCacheDuration(), logger);
+                }
+
+                return new ApiResponse<CategoryResponse>(200, categoryResponse);
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in CategoryService.");
                 return new ApiResponse<CategoryResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -67,6 +103,7 @@ namespace ECommerceApp.Services.Implements
                 category.Description = categoryDto.Description;
 
                 await unitOfWork.SaveChangesAsync();
+                await RefreshCategoryCacheAsync();
 
                 return new ApiResponse<ConfirmationResponse>(200, new ConfirmationResponse
                 {
@@ -75,6 +112,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in CategoryService.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -92,6 +130,7 @@ namespace ECommerceApp.Services.Implements
 
                 category.IsActive = false;
                 await unitOfWork.SaveChangesAsync();
+                await RefreshCategoryCacheAsync();
 
                 return new ApiResponse<ConfirmationResponse>(200, new ConfirmationResponse
                 {
@@ -100,6 +139,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in CategoryService.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -128,8 +168,25 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in CategoryService.");
                 return new ApiResponse<PagedResult<CategoryResponse>>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
+        }
+
+        private TimeSpan GetCatalogCacheDuration()
+        {
+            var expirationMinutes = cacheOptions.Value.CatalogExpirationMinutes > 0
+                ? cacheOptions.Value.CatalogExpirationMinutes
+                : cacheOptions.Value.DefaultExpirationMinutes;
+
+            return TimeSpan.FromMinutes(expirationMinutes > 0 ? expirationMinutes : 10);
+        }
+
+        private Task RefreshCategoryCacheAsync()
+        {
+            return cacheOptions.Value.Enabled
+                ? cache.RefreshVersionAsync(CatalogCacheKeys.CategoryVersion, logger)
+                : Task.CompletedTask;
         }
     }
 }

@@ -14,7 +14,8 @@ namespace ECommerceApp.Services.Implements;
 public class CustomerService(
     IUnitOfWork unitOfWork, 
     IConfiguration configuration, 
-    ICustomerMapper mapper) : ICustomerService
+    ICustomerMapper mapper,
+    ILogger<CustomerService> logger) : ICustomerService
 {
     public async Task<ApiResponse<CustomerResponse>> RegisterCustomerAsync(CustomerRegistrationRequest customerDto)
     {
@@ -38,6 +39,7 @@ public class CustomerService(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in CustomerService.");
             return new ApiResponse<CustomerResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
         }
     }
@@ -76,6 +78,7 @@ public class CustomerService(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in CustomerService.");
             return new ApiResponse<LoginResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
         }
     }
@@ -97,6 +100,7 @@ public class CustomerService(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in CustomerService.");
             return new ApiResponse<CustomerResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
         }
     }
@@ -133,6 +137,7 @@ public class CustomerService(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in CustomerService.");
             return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
         }
     }
@@ -160,6 +165,7 @@ public class CustomerService(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in CustomerService.");
             return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
         }
     }
@@ -194,6 +200,7 @@ public class CustomerService(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in CustomerService.");
             return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
         }
     }

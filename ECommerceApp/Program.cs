@@ -1,4 +1,5 @@
 using ECommerceApp.Data;
+using ECommerceApp.Filters;
 using ECommerceApp.Repositories.Implements;
 using ECommerceApp.Repositories.Interfaces;
 using ECommerceApp.Services.Implements;
@@ -18,12 +19,9 @@ using ECommerceApp.Mappings.Payments;
 using ECommerceApp.Mappings.Products;
 using ECommerceApp.Mappings.Refunds;
 using ECommerceApp.Middlewares;
-using Elasticsearch.Net;
+using ECommerceApp.Services.Caching;
 using Serilog;
 using Serilog.Sinks.Elasticsearch;
-using Serilog.Enrichers;
-using System.Reflection;
-using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,11 +70,28 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) =>
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddScoped<ControllerActionLoggingFilter>();
+builder.Services.AddControllers(options => options.Filters.Add<ControllerActionLoggingFilter>());
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("EFCoreDBConnection")));
+
+builder.Services.Configure<CacheOptions>(builder.Configuration.GetSection(CacheOptions.SectionName));
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrWhiteSpace(redisConnectionString))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnectionString;
+        options.InstanceName = builder.Configuration["Redis:InstanceName"] ?? "ECommerceApp:";
+    });
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -144,6 +159,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseLoggingMiddleware();
 app.UseErrorHandlingMiddleware();
+app.UseSerilogRequestLogging();
 
 app.UseHttpsRedirection();
 

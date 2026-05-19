@@ -4,17 +4,31 @@ using ECommerceApp.Enums;
 
 namespace ECommerceApp.Services.Implements
 {
-    public class RefundProcessingBackgroundService(IServiceProvider serviceProvider) : BackgroundService
+    public class RefundProcessingBackgroundService(
+        IServiceProvider serviceProvider,
+        ILogger<RefundProcessingBackgroundService> logger) : BackgroundService
     {
         private readonly TimeSpan _interval = TimeSpan.FromMinutes(5);
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            logger.LogInformation("Refund processing background service started with interval {Interval}.", _interval);
+
             while (!stoppingToken.IsCancellationRequested)
             {
-                await ProcessPendingAndFailedRefundsAsync(stoppingToken);
+                try
+                {
+                    await ProcessPendingAndFailedRefundsAsync(stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Unexpected error in RefundProcessingBackgroundService.");
+                }
+
                 await Task.Delay(_interval, stoppingToken);
             }
+
+            logger.LogInformation("Refund processing background service stopped.");
         }
 
         private async Task ProcessPendingAndFailedRefundsAsync(CancellationToken cancellationToken)
@@ -35,6 +49,8 @@ namespace ECommerceApp.Services.Implements
                     .Where(r => r.Status == RefundStatus.Pending || r.Status == RefundStatus.Failed)
                     .ToListAsync(cancellationToken);
 
+                logger.LogInformation("Found {RefundCount} pending or failed refunds to process.", refunds.Count);
+
                 foreach (var refund in refunds)
                 {
                     var gatewayResponse = await refundService.ProcessRefundPaymentAsync(refund);
@@ -48,6 +64,10 @@ namespace ECommerceApp.Services.Implements
 
                         context.Refunds.Update(refund);
                         await context.SaveChangesAsync(cancellationToken);
+                        logger.LogInformation(
+                            "Refund {RefundId} completed with transaction {TransactionId}.",
+                            refund.Id,
+                            refund.TransactionId);
 
                         if (refund.Cancellation?.Order?.Customer != null &&
                             !string.IsNullOrEmpty(refund.Cancellation.Order.Customer.Email))
@@ -64,6 +84,10 @@ namespace ECommerceApp.Services.Implements
                         refund.Status = gatewayResponse.Status;
                         refund.CompletedAt = DateTime.UtcNow;
                         await context.SaveChangesAsync(cancellationToken);
+                        logger.LogWarning(
+                            "Refund {RefundId} was not completed. Gateway status {RefundStatus}.",
+                            refund.Id,
+                            refund.Status);
                     }
                 }
             }

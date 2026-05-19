@@ -8,7 +8,7 @@ using ECommerceApp.Services.Interfaces;
 
 namespace ECommerceApp.Services.Implements
 {
-    public class OrderService(IUnitOfWork unitOfWork) : IOrderService
+    public class OrderService(IUnitOfWork unitOfWork, ILogger<OrderService> logger) : IOrderService
     {
         private static readonly Dictionary<OrderStatus, List<OrderStatus>> AllowedStatusTransitions = new()
         {
@@ -114,6 +114,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in OrderService.");
                 await unitOfWork.RollbackTransactionAsync();
                 return new ApiResponse<OrderResponse>(500, $"An unexpected error occurred during checkout: {ex.Message}");
             }
@@ -136,6 +137,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in OrderService.");
                 return new ApiResponse<OrderResponse>(500, $"An unexpected error occurred while processing your request: {ex.Message}");
             }
         }
@@ -185,6 +187,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in OrderService.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request: {ex.Message}");
             }
         }
@@ -201,6 +204,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in OrderService.");
                 return new ApiResponse<List<OrderResponse>>(500, $"An unexpected error occurred while processing your request: {ex.Message}");
             }
         }
@@ -223,6 +227,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in OrderService.");
                 return new ApiResponse<List<OrderResponse>>(500, $"An unexpected error occurred while processing your request: {ex.Message}");
             }
         }

@@ -6,7 +6,7 @@ using ECommerceApp.Services.Interfaces;
 
 namespace ECommerceApp.Services.Implements
 {
-    public class FeedbackService(IUnitOfWork unitOfWork) : IFeedbackService
+    public class FeedbackService(IUnitOfWork unitOfWork, ILogger<FeedbackService> logger) : IFeedbackService
     {
         public async Task<ApiResponse<FeedbackResponse>> SubmitFeedbackAsync(FeedbackCreateRequest feedbackCreateRequest)
         {
@@ -73,6 +73,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in FeedbackService.");
                 return new ApiResponse<FeedbackResponse>(500, $"An unexpected error occurred while submitting feedback: {ex.Message}");
             }
         }
@@ -121,6 +122,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in FeedbackService.");
                 return new ApiResponse<ProductFeedbackResponse>(500, $"An unexpected error occurred while retrieving feedbacks: {ex.Message}");
             }
         }
@@ -149,6 +151,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in FeedbackService.");
                 return new ApiResponse<List<FeedbackResponse>>(500, $"An unexpected error occurred while retrieving all feedback: {ex.Message}");
             }
         }
@@ -191,6 +194,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in FeedbackService.");
                 return new ApiResponse<FeedbackResponse>(500, $"An unexpected error occurred while updating the feedback: {ex.Message}");
             }
         }
@@ -224,6 +228,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in FeedbackService.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while deleting the feedback: {ex.Message}");
             }
         }

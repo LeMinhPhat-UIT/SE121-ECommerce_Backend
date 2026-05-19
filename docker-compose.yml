@@ -25,6 +25,8 @@ services:
     depends_on:
       sqlserver:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       elasticsearch:
         condition: service_healthy
     env_file:
@@ -43,9 +45,37 @@ services:
       EmailSettings__SenderName: ${EMAILSETTINGS__SENDERNAME}
       EmailSettings__FromEmail: ${EMAILSETTINGS__FROMEMAIL}
       EmailSettings__Password: ${EMAILSETTINGS__PASSWORD}
-      ELASTIC_URI: ${ELASTIC_URI:-http://elasticsearch:9200}
+      ConnectionStrings__Redis: ${CONNECTIONSTRINGS__REDIS}
+      Redis__InstanceName: ${REDIS__INSTANCENAME}
+      Cache__Enabled: ${CACHE__ENABLED}
+      Cache__DefaultExpirationMinutes: ${CACHE__DEFAULTEXPIRATIONMINUTES}
+      Cache__CatalogExpirationMinutes: ${CACHE__CATALOGEXPIRATIONMINUTES}
+      SERILOG_APPLICATION: ${SERILOG_APPLICATION}
+      SERILOG_SERVER: ${SERILOG_SERVER}
+      SERILOG_MINIMUM_LEVEL: ${SERILOG_MINIMUM_LEVEL}
+      SERILOG_MINIMUM_LEVEL_MICROSOFT: ${SERILOG_MINIMUM_LEVEL_MICROSOFT}
+      SERILOG_MINIMUM_LEVEL_SYSTEM: ${SERILOG_MINIMUM_LEVEL_SYSTEM}
+      SERILOG_ELASTIC_URI: ${SERILOG_ELASTIC_URI}
+      SERILOG_ELASTIC_USERNAME: ${SERILOG_ELASTIC_USERNAME}
+      SERILOG_ELASTIC_PASSWORD: ${SERILOG_ELASTIC_PASSWORD}
+      SERILOG_ELASTIC_INDEX_FORMAT: ${SERILOG_ELASTIC_INDEX_FORMAT}
+      SERILOG_ELASTIC_AUTO_REGISTER_TEMPLATE: ${SERILOG_ELASTIC_AUTO_REGISTER_TEMPLATE}
     ports:
       - "${APP_PORT}:8080"
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: ecommerce-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
@@ -77,4 +107,5 @@ services:
 
 volumes:
   sqlserver-data:
+  redis-data:
   esdata:

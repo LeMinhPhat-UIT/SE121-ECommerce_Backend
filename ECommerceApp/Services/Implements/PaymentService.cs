@@ -7,7 +7,10 @@ using ECommerceApp.Services.Interfaces;
 
 namespace ECommerceApp.Services.Implements
 {
-    public class PaymentService(IUnitOfWork unitOfWork, EmailService emailService) : IPaymentService
+    public class PaymentService(
+        IUnitOfWork unitOfWork,
+        EmailService emailService,
+        ILogger<PaymentService> logger) : IPaymentService
     {
         public async Task<ApiResponse<PaymentResponse>> ProcessPaymentAsync(PaymentRequest paymentRequest)
         {
@@ -105,6 +108,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in PaymentService.");
                 await unitOfWork.RollbackTransactionAsync();
                 return new ApiResponse<PaymentResponse>(500, $"An unexpected error occurred while processing the payment: {ex.Message}");
             }
@@ -136,6 +140,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in PaymentService.");
                 return new ApiResponse<PaymentResponse>(500, $"An unexpected error occurred while retrieving the payment: {ex.Message}");
             }
         }
@@ -166,6 +171,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in PaymentService.");
                 return new ApiResponse<PaymentResponse>(500, $"An unexpected error occurred while retrieving the payment: {ex.Message}");
             }
         }
@@ -205,6 +211,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in PaymentService.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while updating the payment status: {ex.Message}");
             }
         }
@@ -255,6 +262,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in PaymentService.");
                 await unitOfWork.RollbackTransactionAsync();
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while completing the COD payment: {ex.Message}");
             }

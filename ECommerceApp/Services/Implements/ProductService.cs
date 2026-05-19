@@ -3,14 +3,20 @@ using ECommerceApp.DTOs.ProductDTOs;
 using ECommerceApp.Entities;
 using ECommerceApp.Mappings.Products;
 using ECommerceApp.Repositories.Interfaces;
+using ECommerceApp.Services.Caching;
 using ECommerceApp.Services.Interfaces;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceApp.Services.Implements
 {
     public class ProductService(
         IUnitOfWork unitOfWork,
-        IProductMapper mapper)
+        IProductMapper mapper,
+        IDistributedCache cache,
+        IOptions<CacheOptions> cacheOptions,
+        ILogger<ProductService> logger)
         : IProductService
     {
         public async Task<ApiResponse<ProductResponse>> CreateProductAsync(ProductCreateRequest productDto)
@@ -33,11 +39,13 @@ namespace ECommerceApp.Services.Implements
                 
                 unitOfWork.ProductRepository.Add(product);
                 await unitOfWork.SaveChangesAsync();
+                await RefreshProductCacheAsync();
                     
                 return new ApiResponse<ProductResponse>(200, mapper.Map(product));
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in ProductService.");
                 return new ApiResponse<ProductResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -46,6 +54,18 @@ namespace ECommerceApp.Services.Implements
         {
             try
             {
+                if (cacheOptions.Value.Enabled)
+                {
+                    var version = await cache.GetVersionAsync(CatalogCacheKeys.ProductVersion, logger);
+                    var cacheKey = CatalogCacheKeys.ProductById(id, version);
+                    var cachedProduct = await cache.GetJsonAsync<ProductResponse>(cacheKey, logger);
+                    if (cachedProduct != null)
+                    {
+                        logger.LogInformation("Product {ProductId} served from cache.", id);
+                        return new ApiResponse<ProductResponse>(200, cachedProduct);
+                    }
+                }
+
                 var product = await unitOfWork.ProductRepository.GetByIdAsync(id);
 
                 if (product == null)
@@ -53,10 +73,19 @@ namespace ECommerceApp.Services.Implements
                     return new ApiResponse<ProductResponse>(404, "Product not found.");
                 }
 
-                return new ApiResponse<ProductResponse>(200, mapper.Map(product));
+                var productResponse = mapper.Map(product);
+                if (cacheOptions.Value.Enabled)
+                {
+                    var version = await cache.GetVersionAsync(CatalogCacheKeys.ProductVersion, logger);
+                    var cacheKey = CatalogCacheKeys.ProductById(id, version);
+                    await cache.SetJsonAsync(cacheKey, productResponse, GetCatalogCacheDuration(), logger);
+                }
+
+                return new ApiResponse<ProductResponse>(200, productResponse);
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in ProductService.");
                 return new ApiResponse<ProductResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -90,6 +119,7 @@ namespace ECommerceApp.Services.Implements
                 product.CategoryId = productDto.CategoryId;
 
                 await unitOfWork.SaveChangesAsync();
+                await RefreshProductCacheAsync();
                 
                 return new ApiResponse<ConfirmationResponse>(200, new ConfirmationResponse
                 {
@@ -98,6 +128,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in ProductService.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -116,6 +147,7 @@ namespace ECommerceApp.Services.Implements
                 product.IsAvailable = false;
 
                 await unitOfWork.SaveChangesAsync();
+                await RefreshProductCacheAsync();
                 
                 return new ApiResponse<ConfirmationResponse>(200, new ConfirmationResponse
                 {
@@ -124,6 +156,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in ProductService.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -151,6 +184,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in ProductService.");
                 return new ApiResponse<PagedResult<ProductResponse>>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -184,6 +218,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in ProductService.");
                 return new ApiResponse<PagedResult<ProductResponse>>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
@@ -202,6 +237,7 @@ namespace ECommerceApp.Services.Implements
                 product.IsAvailable = productStatusUpdateDto.IsAvailable;
 
                 await unitOfWork.SaveChangesAsync();
+                await RefreshProductCacheAsync();
                 
                 return new ApiResponse<ConfirmationResponse>(200, new ConfirmationResponse
                 {
@@ -210,9 +246,25 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in ProductService.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
             }
         }
 
+        private TimeSpan GetCatalogCacheDuration()
+        {
+            var expirationMinutes = cacheOptions.Value.CatalogExpirationMinutes > 0
+                ? cacheOptions.Value.CatalogExpirationMinutes
+                : cacheOptions.Value.DefaultExpirationMinutes;
+
+            return TimeSpan.FromMinutes(expirationMinutes > 0 ? expirationMinutes : 10);
+        }
+
+        private Task RefreshProductCacheAsync()
+        {
+            return cacheOptions.Value.Enabled
+                ? cache.RefreshVersionAsync(CatalogCacheKeys.ProductVersion, logger)
+                : Task.CompletedTask;
+        }
     }
 }

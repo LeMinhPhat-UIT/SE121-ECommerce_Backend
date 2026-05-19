@@ -7,7 +7,10 @@ using ECommerceApp.Services.Interfaces;
 
 namespace ECommerceApp.Services.Implements
 {
-    public class RefundService(IUnitOfWork unitOfWork, EmailService emailService) : IRefundService
+    public class RefundService(
+        IUnitOfWork unitOfWork,
+        EmailService emailService,
+        ILogger<RefundService> logger) : IRefundService
     {
         public async Task<ApiResponse<List<PendingRefundResponse>>> GetEligibleRefundsAsync()
         {
@@ -29,6 +32,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in RefundService.");
                 return new ApiResponse<List<PendingRefundResponse>>(500, $"An unexpected error occurred while retrieving eligible refunds: {ex.Message}");
             }
         }
@@ -108,6 +112,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in RefundService.");
                 return new ApiResponse<RefundResponse>(500, $"An unexpected error occurred while processing the refund: {ex.Message}");
             }
         }
@@ -156,6 +161,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in RefundService.");
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while updating the refund status: {ex.Message}");
             }
         }
@@ -173,6 +179,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in RefundService.");
                 return new ApiResponse<RefundResponse>(500, $"An unexpected error occurred while retrieving the refund: {ex.Message}");
             }
         }
@@ -189,6 +196,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in RefundService.");
                 return new ApiResponse<List<RefundResponse>>(500, $"An unexpected error occurred while retrieving all refunds: {ex.Message}");
             }
         }

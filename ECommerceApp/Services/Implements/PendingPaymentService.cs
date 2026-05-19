@@ -4,12 +4,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceApp.Services.Implements
 {
-    public class PendingPaymentService(IServiceProvider serviceProvider) : BackgroundService
+    public class PendingPaymentService(
+        IServiceProvider serviceProvider,
+        ILogger<PendingPaymentService> logger) : BackgroundService
     {
         private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(5);
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            logger.LogInformation("Pending payment background service started with interval {Interval}.", _checkInterval);
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
@@ -21,6 +25,8 @@ namespace ECommerceApp.Services.Implements
                         .Include(p => p.Order)
                         .Where(p => p.Status == PaymentStatus.Pending && p.PaymentMethod.ToUpper() != "COD")
                         .ToListAsync(stoppingToken);
+
+                    logger.LogInformation("Found {PendingPaymentCount} pending non-COD payments to inspect.", pendingPayments.Count);
 
                     // List to track orders for which we need to send confirmation emails.
                     var ordersToEmail = new List<int>();
@@ -48,6 +54,9 @@ namespace ECommerceApp.Services.Implements
 
                     // Save all status updates.
                     await context.SaveChangesAsync(stoppingToken);
+                    logger.LogInformation(
+                        "Pending payment scan completed. {CompletedOrderCount} orders moved to confirmation email flow.",
+                        ordersToEmail.Count);
 
                     // If there are any orders that have been updated to Processing, send order confirmation emails.
                     if (ordersToEmail.Any())
@@ -64,12 +73,14 @@ namespace ECommerceApp.Services.Implements
                 }
                 catch (Exception ex)
                 {
-                    // Log the exception as needed.
+                    logger.LogError(ex, "Unexpected error in PendingPaymentService.");
                 }
 
                 // Wait for the next interval.
                 await Task.Delay(_checkInterval, stoppingToken);
             }
+
+            logger.LogInformation("Pending payment background service stopped.");
         }
 
         // Simulates a response from the payment gateway for pending payments.

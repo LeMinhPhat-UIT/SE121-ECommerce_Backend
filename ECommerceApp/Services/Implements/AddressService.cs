@@ -9,7 +9,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceApp.Services.Implements;
 
-public class AddressService(IUnitOfWork unitOfWork, IAddressMapper mapper) : IAddressService
+public class AddressService(
+    IUnitOfWork unitOfWork,
+    IAddressMapper mapper,
+    ILogger<AddressService> logger) : IAddressService
 {
     public async Task<ApiResponse<AddressResponse>> CreateAddressAsync(AddressCreateRequest addressDto)
     {
@@ -32,6 +35,7 @@ public class AddressService(IUnitOfWork unitOfWork, IAddressMapper mapper) : IAd
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in AddressService.");
             return new ApiResponse<AddressResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
         }
     }
@@ -57,6 +61,7 @@ public class AddressService(IUnitOfWork unitOfWork, IAddressMapper mapper) : IAd
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in AddressService.");
             return new ApiResponse<AddressResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
         }
     }
@@ -93,6 +98,7 @@ public class AddressService(IUnitOfWork unitOfWork, IAddressMapper mapper) : IAd
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in AddressService.");
             return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
         }
     }
@@ -123,6 +129,7 @@ public class AddressService(IUnitOfWork unitOfWork, IAddressMapper mapper) : IAd
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in AddressService.");
             return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
         }
     }
@@ -157,6 +164,7 @@ public class AddressService(IUnitOfWork unitOfWork, IAddressMapper mapper) : IAd
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in AddressService.");
             return new ApiResponse<PagedResult<AddressResponse>>(500, $"An unexpected error occurred while processing your request, Error: {ex.Message}");
         }
     }

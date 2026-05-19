@@ -9,7 +9,10 @@ using ECommerceApp.Services.Interfaces;
 
 namespace ECommerceApp.Services.Implements
 {
-    public class CancellationService(IUnitOfWork unitOfWork, EmailService emailService) : ICancellationService
+    public class CancellationService(
+        IUnitOfWork unitOfWork,
+        EmailService emailService,
+        ILogger<CancellationService> logger) : ICancellationService
     {
         // Handles a cancellation request from a customer.
         public async Task<ApiResponse<CancellationResponse>> RequestCancellationAsync(CancellationRequest cancellationRequest)
@@ -75,6 +78,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in CancellationService.");
                 // Log exception detailed message
                 return new ApiResponse<CancellationResponse>(500, $"An unexpected error occurred while requesting cancellation: {ex.Message}");
             }
@@ -111,6 +115,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in CancellationService.");
                 return new ApiResponse<CancellationResponse>(500, $"An unexpected error occurred: {ex.Message}");
             }
         }
@@ -173,6 +178,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in CancellationService.");
                 await unitOfWork.RollbackTransactionAsync();
                 return new ApiResponse<ConfirmationResponse>(500, $"An unexpected error occurred: {ex.Message}");
             }
@@ -203,6 +209,7 @@ namespace ECommerceApp.Services.Implements
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Unexpected error in CancellationService.");
                 return new ApiResponse<List<CancellationResponse>>(500, $"An unexpected error occurred while retrieving cancellations: {ex.Message}");
             }
         }

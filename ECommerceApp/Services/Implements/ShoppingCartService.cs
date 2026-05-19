@@ -9,7 +9,8 @@ namespace ECommerceApp.Services.Implements;
 
 public class ShoppingCartService(
     IUnitOfWork unitOfWork,
-    ICartMapper mapper) : IShoppingCartService
+    ICartMapper mapper,
+    ILogger<ShoppingCartService> logger) : IShoppingCartService
 {
     public async Task<ApiResponse<CartResponse>> GetCartByCustomerIdAsync(int customerId)
     {
@@ -25,6 +26,7 @@ public class ShoppingCartService(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in ShoppingCartService.");
             return new ApiResponse<CartResponse>(500, $"Error: {ex.Message}");
         }
     }
@@ -85,6 +87,7 @@ public class ShoppingCartService(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in ShoppingCartService.");
             return new ApiResponse<CartResponse>(500, $"Error: {ex.Message}");
         }
     }
@@ -113,6 +116,7 @@ public class ShoppingCartService(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in ShoppingCartService.");
             return new ApiResponse<CartResponse>(500, $"Error: {ex.Message}");
         }
     }
@@ -137,6 +141,7 @@ public class ShoppingCartService(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in ShoppingCartService.");
             return new ApiResponse<CartResponse>(500, $"Error: {ex.Message}");
         }
     }
@@ -159,6 +164,7 @@ public class ShoppingCartService(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unexpected error in ShoppingCartService.");
             return new ApiResponse<ConfirmationResponse>(500, $"Error: {ex.Message}");
         }
     }
