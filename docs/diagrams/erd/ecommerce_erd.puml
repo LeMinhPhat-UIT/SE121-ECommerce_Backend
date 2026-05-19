@@ -1,0 +1,181 @@
+@startuml
+title ECommerce Backend - Entity Relationship Diagram
+
+hide circle
+skinparam shadowing false
+
+entity Customer {
+  *Id : int <<PK>>
+  --
+  FirstName : string
+  LastName : string
+  Email : string <<unique>>
+  PhoneNumber : string
+  DateOfBirth : DateTime
+  Password : string
+  IsActive : bool
+}
+
+entity Address {
+  *Id : int <<PK>>
+  --
+  CustomerId : int <<FK>>
+  AddressLine1 : string
+  AddressLine2 : string
+  City : string
+  State : string
+  PostalCode : string
+  Country : string
+}
+
+entity Category {
+  *Id : int <<PK>>
+  --
+  Name : string <<unique>>
+  Description : string
+  IsActive : bool
+}
+
+entity Product {
+  *Id : int <<PK>>
+  --
+  CategoryId : int <<FK>>
+  Name : string
+  Description : string
+  Price : decimal(18,2)
+  StockQuantity : int
+  ImageUrl : string
+  DiscountPercentage : int
+  IsAvailable : bool
+}
+
+entity Cart {
+  *Id : int <<PK>>
+  --
+  CustomerId : int <<FK>>
+  IsCheckedOut : bool
+  CreatedAt : DateTime
+  UpdatedAt : DateTime
+}
+
+entity CartItem {
+  *Id : int <<PK>>
+  --
+  CartId : int <<FK>>
+  ProductId : int <<FK>>
+  Quantity : int
+  UnitPrice : decimal(18,2)
+  Discount : decimal(18,2)
+  TotalPrice : decimal(18,2)
+  CreatedAt : DateTime
+  UpdatedAt : DateTime
+}
+
+entity Order {
+  *Id : int <<PK>>
+  --
+  CustomerId : int <<FK>>
+  BillingAddressId : int <<FK>>
+  ShippingAddressId : int <<FK>>
+  OrderNumber : string
+  OrderDate : DateTime
+  TotalBaseAmount : decimal(18,2)
+  TotalDiscountAmount : decimal(18,2)
+  ShippingCost : decimal(18,2)
+  TotalAmount : decimal(18,2)
+  OrderStatus : OrderStatus
+}
+
+entity OrderItem {
+  *Id : int <<PK>>
+  --
+  OrderId : int <<FK>>
+  ProductId : int <<FK>>
+  Quantity : int
+  UnitPrice : decimal(18,2)
+  Discount : decimal(18,2)
+  TotalPrice : decimal(18,2)
+}
+
+entity Payment {
+  *Id : int <<PK>>
+  --
+  OrderId : int <<FK>>
+  PaymentMethod : string
+  TransactionId : string?
+  Amount : decimal(18,2)
+  PaymentDate : DateTime
+  Status : PaymentStatus
+}
+
+entity Cancellation {
+  *Id : int <<PK>>
+  --
+  OrderId : int <<FK>>
+  Reason : string
+  Status : CancellationStatus
+  RequestedAt : DateTime
+  ProcessedAt : DateTime?
+  ProcessedBy : int?
+  OrderAmount : decimal(18,2)
+  CancellationCharges : decimal(18,2)?
+  Remarks : string?
+}
+
+entity Refund {
+  *Id : int <<PK>>
+  --
+  CancellationId : int <<FK>>
+  PaymentId : int <<FK>>
+  Amount : decimal(18,2)
+  Status : RefundStatus
+  RefundMethod : string
+  RefundReason : string?
+  TransactionId : string?
+  InitiatedAt : DateTime
+  CompletedAt : DateTime?
+  ProcessedBy : int?
+}
+
+entity Feedback {
+  *Id : int <<PK>>
+  --
+  CustomerId : int <<FK>>
+  ProductId : int <<FK>>
+  Rating : int
+  Comment : string?
+  CreatedAt : DateTime
+  UpdatedAt : DateTime
+}
+
+entity Status {
+  *Id : int <<PK>>
+  --
+  Name : string
+}
+
+Customer ||--o{ Address : owns
+Customer ||--o{ Cart : has
+Cart ||--o{ CartItem : contains
+Product ||--o{ CartItem : appears_in
+
+Category ||--o{ Product : contains
+Customer ||--o{ Order : places
+Address ||--o{ Order : billing
+Address ||--o{ Order : shipping
+Order ||--|{ OrderItem : contains
+Product ||--o{ OrderItem : ordered_as
+Order ||--o| Payment : payment
+Order ||--o| Cancellation : cancellation
+Payment ||--o| Refund : refund
+Cancellation ||--o| Refund : refund
+Customer ||--o{ Feedback : writes
+Product ||--o{ Feedback : receives
+
+note right of Status
+  Seed data:
+  Pending, Processing, Shipped, Delivered, Canceled,
+  Completed, Failed, Approved, Rejected, Refunded.
+end note
+
+@enduml

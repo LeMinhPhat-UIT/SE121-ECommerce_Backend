@@ -1,0 +1,76 @@
+@startuml
+title ECommerce Backend - Payment Processing Activity Diagram
+
+skinparam shadowing false
+
+start
+:Receive payment request;
+if (ProcessPayment?) then (yes)
+  :Begin transaction;
+  :Load order by order id and customer id with payment;
+  if (Order exists?) then (yes)
+    if (Amount equals order total?) then (yes)
+      if (Existing payment?) then (yes)
+        if (Existing payment failed and order pending?) then (yes)
+          :Reset payment to Pending with new request data;
+        else (no)
+          :Return 400 payment already in progress or completed;
+          stop
+        endif
+      else (no)
+        :Create new Pending payment;
+      endif
+      if (Payment method is COD?) then (yes)
+        :Set order Processing;
+      else (no)
+        :Simulate payment gateway;
+        if (Completed?) then (yes)
+          :Set payment Completed;
+          :Generate transaction id;
+          :Set order Processing;
+        elseif (Failed?) then (yes)
+          :Set payment Failed;
+        else (Pending)
+          :Keep payment Pending;
+        endif
+      endif
+      :Save payment/order;
+      :Commit transaction;
+      if (Order Processing?) then (yes)
+        :Send order confirmation email;
+      endif
+      :Return PaymentResponse;
+    else (no)
+      :Return 400 amount mismatch;
+    endif
+  else (no)
+    :Return 404 order not found;
+  endif
+elseif (UpdatePaymentStatus?) then (yes)
+  :Load payment with order;
+  :Set payment status;
+  if (Completed and not COD?) then (yes)
+    :Set transaction id;
+    :Set order Processing;
+  endif
+  :Save changes;
+  :Send order confirmation when order Processing;
+  :Return confirmation;
+elseif (CompleteCODPayment?) then (yes)
+  :Begin transaction;
+  :Load payment by payment id and order id with order;
+  if (Payment/order valid, order shipped, method COD?) then (yes)
+    :Set payment Completed;
+    :Set order Delivered;
+    :Save and commit;
+    :Return confirmation;
+  else (no)
+    :Return 404/400/409;
+  endif
+else (Lookup)
+  :Load payment by payment id or order id;
+  :Return PaymentResponse or 404;
+endif
+stop
+
+@enduml

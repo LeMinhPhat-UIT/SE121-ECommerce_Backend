@@ -1,0 +1,48 @@
+@startuml
+title ECommerce Backend - Docker Deployment Diagram
+
+skinparam shadowing false
+
+actor "Developer / API Consumer" as User
+
+node "Docker Host" as Host {
+  node "ecommerce-app\nASP.NET Core container" as App {
+    artifact "ECommerceApp\nnet10.0 Web API" as ApiArtifact
+    artifact ".env injected configuration" as Env
+  }
+
+  database "ecommerce-sqlserver\nSQL Server 2022" as SQL
+  database "ecommerce-redis\nRedis 7.2" as Redis
+  database "ecommerce-elasticsearch\nElasticsearch 8.9" as ES
+  node "ecommerce-kibana\nKibana 8.9" as Kibana
+
+  folder "sqlserver-data volume" as SqlVolume
+  folder "redis-data volume" as RedisVolume
+  folder "esdata volume" as EsVolume
+}
+
+cloud "SMTP Server" as SMTP
+
+User --> App : HTTP/HTTPS\nAPP_PORT -> 8080
+App --> SQL : EF Core\nConnectionStrings__EFCoreDBConnection
+App --> Redis : catalog cache\nConnectionStrings__Redis
+App --> ES : Serilog sink\nSERILOG_ELASTIC_URI
+App --> SMTP : SMTP with SSL\nEmailSettings
+Kibana --> ES : ELASTICSEARCH_HOSTS
+
+SQL -- SqlVolume : /var/opt/mssql
+Redis -- RedisVolume : /data
+ES -- EsVolume : /usr/share/elasticsearch/data
+
+note right of App
+  docker-compose waits for SQL Server, Redis,
+  and Elasticsearch health checks before starting the API.
+end note
+
+note bottom of App
+  Runtime configuration includes JWT issuer/audience/key,
+  admin emails, SMTP credentials, Redis, cache TTLs,
+  and Serilog index settings.
+end note
+
+@enduml

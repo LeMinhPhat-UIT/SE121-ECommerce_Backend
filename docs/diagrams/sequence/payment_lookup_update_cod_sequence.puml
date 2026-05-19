@@ -1,0 +1,86 @@
+@startuml
+title ECommerce Backend - Payment Lookup, Status Update, and COD Completion Sequence
+
+skinparam shadowing false
+
+actor "Customer / Admin" as Actor
+actor "Admin / Delivery Operation" as Admin
+participant "PaymentsController" as Controller
+participant "PaymentService" as Service
+participant "UnitOfWork" as Uow
+participant "PaymentRepository" as PaymentRepo
+participant "OrderRepository" as OrderRepo
+database "SQL Server" as DB
+participant "EmailService" as Email
+participant "SMTP Server" as SMTP
+
+== Payment lookup ==
+Actor -> Controller : GET /api/Payments/GetPaymentById/{paymentId}\nor GetPaymentByOrderId/{orderId}
+alt lookup by payment id
+  Controller -> Service : GetPaymentByIdAsync(paymentId)
+  Service -> PaymentRepo : GetByIdAsync(paymentId)
+else lookup by order id
+  Controller -> Service : GetPaymentByOrderIdAsync(orderId)
+  Service -> PaymentRepo : GetByOrderIdAsync(orderId)
+end
+PaymentRepo -> DB : SELECT Payment
+DB --> PaymentRepo : Payment?
+alt payment missing
+  Service --> Controller : ApiResponse 404
+else found
+  Service -> Service : Map PaymentResponse
+  Service --> Controller : PaymentResponse
+end
+Controller --> Actor : JSON response
+
+== Manual payment status update ==
+Admin -> Controller : PUT /api/Payments/UpdatePaymentStatus
+Controller -> Service : UpdatePaymentStatusAsync(request)
+Service -> PaymentRepo : GetByIdWithOrderAsync(paymentId, true)
+PaymentRepo -> DB : SELECT Payment + Order
+DB --> PaymentRepo : Payment?
+
+alt payment missing
+  Service --> Controller : ApiResponse 404
+else found
+  Service -> Service : Set Payment.Status
+  alt non-COD completed
+    Service -> Service : Set TransactionId and Order.Processing
+  end
+  Service -> Uow : SaveChangesAsync()
+  Uow -> DB : UPDATE Payment and maybe Order
+  alt order is Processing
+    Service -> Service : SendOrderConfirmationEmailAsync(orderId)
+    Service -> OrderRepo : GetOrderWithFullDetailsAsync(orderId)
+    OrderRepo -> DB : SELECT Order + Customer + Addresses + Items + Payment
+    Service -> Email : SendEmailAsync(order confirmation)
+    Email -> SMTP : deliver email
+  end
+  Service --> Controller : ConfirmationResponse
+end
+Controller --> Admin : JSON response
+
+== Complete COD payment after shipping ==
+Admin -> Controller : POST /api/Payments/CompleteCODPayment
+Controller -> Service : CompleteCodPaymentAsync(request)
+Service -> Uow : BeginTransactionAsync()
+Service -> PaymentRepo : GetByIdAndOrderIdWithOrderAsync(paymentId, orderId, true)
+PaymentRepo -> DB : SELECT Payment + Order
+DB --> PaymentRepo : Payment?
+
+alt payment/order missing
+  Service --> Controller : ApiResponse 404
+else order is not Shipped
+  Service --> Controller : ApiResponse 400
+else payment method is not COD
+  Service --> Controller : ApiResponse 409
+else valid COD completion
+  Service -> Service : Set Payment.Completed and Order.Delivered
+  Service -> Uow : SaveChangesAsync()
+  Uow -> DB : UPDATE Payment and Order
+  Service -> Uow : CommitTransactionAsync()
+  Service --> Controller : ConfirmationResponse
+end
+Controller --> Admin : JSON response
+
+@enduml

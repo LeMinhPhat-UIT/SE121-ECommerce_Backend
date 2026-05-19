@@ -1,0 +1,52 @@
+@startuml
+title ECommerce Backend - Refund Processing Activity Diagram
+
+skinparam shadowing false
+
+start
+:Receive POST /api/Refunds/ProcessRefund;
+:Load cancellation with order, payment, customer;
+if (Cancellation exists?) then (yes)
+  if (Cancellation approved?) then (yes)
+    :Check no refund exists for cancellation;
+    if (Duplicate refund?) then (yes)
+      :Return 400 duplicate refund;
+      stop
+    else (no)
+      :Validate payment exists and is not COD;
+      if (Payment is refundable?) then (yes)
+        :Compute refund amount\nOrderAmount - CancellationCharges;
+        if (Refund amount > 0?) then (yes)
+          :Create Refund with Pending status;
+          :Save Refund;
+          :Call simulated refund gateway;
+          if (Gateway success?) then (yes)
+            :Set Refund.Completed;
+            :Store transaction id and completed time;
+            :Set Payment.Refunded;
+            :Send success email;
+          else (no)
+            :Set Refund.Failed or Pending;
+          endif
+          :Save final refund/payment state;
+          :Return RefundResponse;
+          stop
+        else (no)
+          :Return 400 invalid refund amount;
+          stop
+        endif
+      else (no)
+        :Return 400 no online payment to refund;
+        stop
+      endif
+    endif
+  else (no)
+    :Return 400 only approved cancellations can be refunded;
+    stop
+  endif
+else (no)
+  :Return 404 cancellation not found;
+  stop
+endif
+
+@enduml

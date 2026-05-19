@@ -1,0 +1,63 @@
+@startuml
+title ECommerce Backend - Shopping Cart Management Activity Diagram
+
+skinparam shadowing false
+
+start
+:Receive cart endpoint request;
+:Validate JWT;
+:Check admin role or matching customer id;
+if (Authorized?) then (yes)
+  if (Get cart?) then (yes)
+    :Load active cart by customer id;
+    if (Cart exists?) then (yes)
+      :Map cart and calculate totals;
+    else (no)
+      :Create empty CartResponse;
+    endif
+    :Return CartResponse;
+  elseif (Add item?) then (yes)
+    :Load product;
+    if (Product exists and stock is enough?) then (yes)
+      :Load active cart with tracking;
+      if (Cart exists?) then (yes)
+        :Find existing cart item;
+      else (no)
+        :Create new active cart;
+      endif
+      if (Item already in cart?) then (yes)
+        :Validate combined quantity <= stock;
+        :Increase quantity and recalculate total;
+      else (no)
+        :Create CartItem with unit price, discount, total;
+      endif
+      :Save changes;
+      :Return updated CartResponse;
+    else (no)
+      :Return 404 or 400;
+    endif
+  elseif (Update item?) then (yes)
+    :Load active cart;
+    :Find cart item;
+    :Validate quantity <= product stock;
+    :Update quantity and total;
+    :Save changes;
+    :Return CartResponse;
+  elseif (Remove item?) then (yes)
+    :Load active cart;
+    :Find cart item;
+    :Remove item;
+    :Save changes;
+    :Return CartResponse;
+  else (Clear cart)
+    :Load active cart;
+    :Remove all cart items;
+    :Save changes;
+    :Return confirmation;
+  endif
+else (no)
+  :Return 403 Forbidden;
+endif
+stop
+
+@enduml

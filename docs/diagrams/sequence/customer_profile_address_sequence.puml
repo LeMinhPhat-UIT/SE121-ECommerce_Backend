@@ -1,0 +1,121 @@
+@startuml
+title ECommerce Backend - Customer Profile and Address Management Sequence
+
+skinparam shadowing false
+
+actor "Customer / Admin" as Actor
+participant "ASP.NET Core Auth" as Auth
+participant "CustomersController" as Customers
+participant "AddressesController" as Addresses
+participant "ClaimsPrincipalExtensions" as Claims
+participant "CustomerService" as CustomerService
+participant "AddressService" as AddressService
+participant "CustomerMapper\nAddressMapper" as Mapper
+participant "UnitOfWork" as Uow
+participant "CustomerRepository\nAddressRepository" as Repo
+database "SQL Server" as DB
+participant "BCrypt" as BCrypt
+
+== Protected customer profile action ==
+Actor -> Auth : Send JWT on protected customer route
+Auth --> Customers : ClaimsPrincipal(customer_id, role)
+Customers -> Claims : GetCustomerId(), IsAdmin()
+
+alt non-admin attempts another customer id
+  Customers --> Actor : 403 Forbidden
+else owner or admin
+  alt GetCustomerById
+    Customers -> CustomerService : GetCustomerByIdAsync(id)
+    CustomerService -> Repo : CustomerRepository.GetActiveByIdAsync(id)
+    Repo -> DB : SELECT active customer
+    DB --> Repo : Customer?
+    Repo --> CustomerService : customer
+    CustomerService -> Mapper : Map(Customer)
+    Mapper --> CustomerService : CustomerResponse
+    CustomerService --> Customers : ApiResponse<CustomerResponse>
+  else UpdateCustomer
+    Customers -> CustomerService : UpdateCustomerAsync(request)
+    CustomerService -> Repo : GetByIdAsync(request.CustomerId, trackChanges:true)
+    CustomerService -> Repo : ExistsByEmailAsync(email, excludeId)
+    Repo -> DB : SELECT customer and email conflict
+    DB --> Repo : validation result
+    CustomerService -> Uow : SaveChangesAsync()
+    Uow -> DB : UPDATE Customer
+    CustomerService --> Customers : ConfirmationResponse
+  else DeleteCustomer
+    Customers -> CustomerService : DeleteCustomerAsync(id)
+    CustomerService -> Repo : GetByIdAsync(id, trackChanges:true)
+    Repo -> DB : SELECT Customer
+    CustomerService -> Uow : SaveChangesAsync()
+    Uow -> DB : UPDATE Customer.IsActive = false
+    CustomerService --> Customers : ConfirmationResponse
+  else ChangePassword
+    Customers -> CustomerService : ChangePasswordAsync(request)
+    CustomerService -> Repo : GetByIdAsync(id, trackChanges:true)
+    Repo -> DB : SELECT Customer
+    CustomerService -> BCrypt : Verify(currentPassword, hash)
+    BCrypt --> CustomerService : valid / invalid
+    alt invalid current password
+      CustomerService --> Customers : ApiResponse 401
+    else valid
+      CustomerService -> BCrypt : HashPassword(newPassword)
+      CustomerService -> Uow : SaveChangesAsync()
+      Uow -> DB : UPDATE Customer.Password
+      CustomerService --> Customers : ConfirmationResponse
+    end
+  end
+  Customers --> Actor : JSON response
+end
+
+== Protected address action ==
+Actor -> Auth : Send JWT on address route
+Auth --> Addresses : ClaimsPrincipal(customer_id, role)
+Addresses -> Claims : GetCustomerId(), IsAdmin()
+
+alt non-admin attempts another customer's address data
+  Addresses --> Actor : 403 Forbidden
+else owner or admin
+  alt CreateAddress
+    Addresses -> AddressService : CreateAddressAsync(request)
+    AddressService -> Repo : CustomerRepository.GetByIdAsync(customerId)
+    Repo -> DB : SELECT Customer
+    AddressService -> Mapper : Map(AddressCreateRequest)
+    AddressService -> Repo : AddressRepository.Add(address)
+    AddressService -> Uow : SaveChangesAsync()
+    Uow -> DB : INSERT Address
+    AddressService -> Mapper : Map(Address)
+    AddressService --> Addresses : AddressResponse
+  else GetAddressById
+    Addresses -> AddressService : GetAddressByIdAsync(id, currentCustomerId, isAdmin)
+    AddressService -> Repo : AddressRepository.GetByIdAsync(id)
+    Repo -> DB : SELECT Address
+    AddressService -> AddressService : service-level owner check
+    AddressService -> Mapper : Map(Address)
+    AddressService --> Addresses : AddressResponse
+  else UpdateAddress
+    Addresses -> AddressService : UpdateAddressAsync(request)
+    AddressService -> Repo : GetByIdAndCustomerIdAsync(addressId, customerId, true)
+    Repo -> DB : SELECT Address
+    AddressService -> Uow : SaveChangesAsync()
+    Uow -> DB : UPDATE Address
+    AddressService --> Addresses : ConfirmationResponse
+  else DeleteAddress
+    Addresses -> AddressService : DeleteAddressAsync(request)
+    AddressService -> Repo : GetByIdAndCustomerIdAsync(addressId, customerId, true)
+    Repo -> DB : SELECT Address
+    AddressService -> Repo : Remove(address)
+    AddressService -> Uow : SaveChangesAsync()
+    Uow -> DB : DELETE Address
+    AddressService --> Addresses : ConfirmationResponse
+  else GetAddressesByCustomer
+    Addresses -> AddressService : GetAddressesByCustomerAsync(customerId, pagination)
+    AddressService -> Repo : QueryByCustomerId(customerId)
+    Repo -> DB : SELECT paged Addresses
+    DB --> Repo : Address page + count
+    AddressService -> Mapper : Map each Address
+    AddressService --> Addresses : PagedResult<AddressResponse>
+  end
+  Addresses --> Actor : JSON response
+end
+
+@enduml

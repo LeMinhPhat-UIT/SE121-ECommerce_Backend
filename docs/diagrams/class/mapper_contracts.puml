@@ -1,0 +1,120 @@
+@startuml
+title ECommerce Backend - Mapperly Mapping Contracts Diagram
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+package "Mapper Interfaces" {
+  interface ICustomerMapper {
+    +Map(Customer) : CustomerResponse
+    +Map(CustomerRegistrationRequest) : Customer
+  }
+  interface IAddressMapper {
+    +Map(Address) : AddressResponse
+    +Map(AddressCreateRequest) : Address
+    +Map(AddressUpdateRequest, Address) : void
+  }
+  interface ICategoryMapper {
+    +Map(Category) : CategoryResponse
+    +Map(CategoryCreateRequest) : Category
+    +Map(CategoryUpdateRequest, Category) : void
+  }
+  interface IProductMapper {
+    +Map(Product) : ProductResponse
+    +Map(ProductCreateRequest) : Product
+    +Map(ProductUpdateRequest, Product) : void
+  }
+  interface ICartMapper {
+    +Map(Cart) : CartResponse
+    +Map(CartItem) : CartItemResponse
+  }
+  interface IOrderMapper {
+    +Map(Order) : OrderResponse
+    +Map(OrderItem) : OrderItemResponse
+  }
+  interface IPaymentMapper {
+    +Map(Payment) : PaymentResponse
+    +Map(PaymentRequest) : Payment
+  }
+  interface ICancellationMapper {
+    +Map(Cancellation) : CancellationResponse
+  }
+  interface IRefundMapper {
+    +Map(Refund) : RefundResponse
+    +Map(Cancellation) : PendingRefundResponse
+  }
+  interface IFeedbackMapper {
+  }
+}
+
+package "Generated/Partial Implementations" {
+  class CustomerMapper
+  class AddressMapper
+  class CategoryMapper
+  class ProductMapper
+  class CartMapper
+  class OrderMapper
+  class PaymentMapper
+  class CancellationMapper
+  class RefundMapper
+  class FeedbackMapper
+}
+
+ICustomerMapper <|.. CustomerMapper
+IAddressMapper <|.. AddressMapper
+ICategoryMapper <|.. CategoryMapper
+IProductMapper <|.. ProductMapper
+ICartMapper <|.. CartMapper
+IOrderMapper <|.. OrderMapper
+IPaymentMapper <|.. PaymentMapper
+ICancellationMapper <|.. CancellationMapper
+IRefundMapper <|.. RefundMapper
+IFeedbackMapper <|.. FeedbackMapper
+
+ICustomerMapper ..> Customer
+ICustomerMapper ..> CustomerRegistrationRequest
+ICustomerMapper ..> CustomerResponse
+
+IAddressMapper ..> Address
+IAddressMapper ..> AddressCreateRequest
+IAddressMapper ..> AddressUpdateRequest
+IAddressMapper ..> AddressResponse
+
+ICategoryMapper ..> Category
+ICategoryMapper ..> CategoryCreateRequest
+ICategoryMapper ..> CategoryUpdateRequest
+ICategoryMapper ..> CategoryResponse
+
+IProductMapper ..> Product
+IProductMapper ..> ProductCreateRequest
+IProductMapper ..> ProductUpdateRequest
+IProductMapper ..> ProductResponse
+
+ICartMapper ..> Cart
+ICartMapper ..> CartItem
+ICartMapper ..> CartResponse
+ICartMapper ..> CartItemResponse
+
+IOrderMapper ..> Order
+IOrderMapper ..> OrderItem
+IOrderMapper ..> OrderResponse
+IOrderMapper ..> OrderItemResponse
+
+IPaymentMapper ..> Payment
+IPaymentMapper ..> PaymentRequest
+IPaymentMapper ..> PaymentResponse
+
+ICancellationMapper ..> Cancellation
+ICancellationMapper ..> CancellationResponse
+
+IRefundMapper ..> Refund
+IRefundMapper ..> Cancellation
+IRefundMapper ..> RefundResponse
+IRefundMapper ..> PendingRefundResponse
+
+note bottom of IFeedbackMapper
+  FeedbackService currently maps feedback DTOs manually.
+end note
+
+@enduml

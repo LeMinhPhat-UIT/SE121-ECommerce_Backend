@@ -1,0 +1,53 @@
+@startuml
+title ECommerce Backend - Feedback Management Activity Diagram
+
+skinparam shadowing false
+
+start
+:Receive feedback endpoint request;
+if (SubmitFeedback?) then (yes)
+  :Load active customer;
+  :Load product;
+  :Check delivered purchase exists;
+  :Check duplicate feedback;
+  if (All validations pass?) then (yes)
+    :Create Feedback;
+    :Save changes;
+    :Return FeedbackResponse;
+  else (no)
+    :Return 404 or 400;
+  endif
+elseif (GetFeedbackForProduct?) then (yes)
+  :Load product;
+  if (Product exists?) then (yes)
+    :Load feedback with customers;
+    :Calculate average rating;
+    :Return ProductFeedbackResponse;
+  else (no)
+    :Return 404;
+  endif
+elseif (GetAllFeedback?) then (yes)
+  :Load all feedback with customer and product details;
+  :Return List<FeedbackResponse>;
+elseif (UpdateFeedback?) then (yes)
+  :Load feedback by feedback id and customer id;
+  if (Found and owner?) then (yes)
+    :Update rating/comment/UpdatedAt;
+    :Save changes;
+    :Return FeedbackResponse;
+  else (no)
+    :Return 404;
+  endif
+else (DeleteFeedback)
+  :Load feedback by id;
+  if (Found and customer owns feedback?) then (yes)
+    :Remove feedback;
+    :Save changes;
+    :Return confirmation;
+  else (no)
+    :Return 404 or 401;
+  endif
+endif
+stop
+
+@enduml

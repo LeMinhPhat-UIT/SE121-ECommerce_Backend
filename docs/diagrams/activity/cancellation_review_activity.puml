@@ -1,0 +1,52 @@
+@startuml
+title ECommerce Backend - Cancellation Review Activity Diagram
+
+skinparam shadowing false
+
+start
+:Receive cancellation request;
+if (Customer requests cancellation?) then (yes)
+  :Load order by order id and customer id;
+  if (Order exists?) then (yes)
+    if (Order status is Processing?) then (yes)
+      :Check duplicate cancellation by order id;
+      if (Duplicate exists?) then (yes)
+        :Return 400 duplicate request;
+      else (no)
+        :Create Cancellation.Pending;
+        :Save changes;
+        :Return CancellationResponse;
+      endif
+    else (no)
+      :Return 400 not eligible;
+    endif
+  else (no)
+    :Return 404 order not found;
+  endif
+elseif (Admin updates cancellation status?) then (yes)
+  :Begin transaction;
+  :Load cancellation with order, customer, order items, products;
+  if (Cancellation exists and status is Pending?) then (yes)
+    :Set status, processed fields, remarks;
+    if (Approved?) then (yes)
+      :Set order Canceled;
+      :Apply cancellation charges;
+      :Restore stock for each order item;
+      :Save and commit;
+      :Send approval email;
+    else (Rejected)
+      :Save and commit;
+      :Send rejection email;
+    endif
+    :Return confirmation;
+  else (no)
+    :Return 404 or 400;
+  endif
+else (Read cancellation data)
+  :Load cancellation by id or all cancellations with order;
+  :Map to CancellationResponse;
+  :Return result;
+endif
+stop
+
+@enduml

@@ -1,0 +1,171 @@
+@startuml
+title ECommerce Backend - Repository Contracts and UnitOfWork Diagram
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+interface IUnitOfWork {
+  +AddressRepository : IAddressRepository
+  +CustomerRepository : ICustomerRepository
+  +CategoryRepository : ICategoryRepository
+  +ProductRepository : IProductRepository
+  +CartRepository : ICartRepository
+  +CartItemRepository : ICartItemRepository
+  +OrderRepository : IOrderRepository
+  +PaymentRepository : IPaymentRepository
+  +CancellationRepository : ICancellationRepository
+  +FeedbackRepository : IFeedbackRepository
+  +RefundRepository : IRefundRepository
+  +SaveChangesAsync()
+  +BeginTransactionAsync()
+  +CommitTransactionAsync()
+  +RollbackTransactionAsync()
+}
+
+class UnitOfWork
+class ApplicationDbContext
+
+package "Customer and Address" {
+  interface ICustomerRepository {
+    +ExistsByEmailAsync(string, int?)
+    +GetByIdAsync(int, bool)
+    +GetActiveByIdAsync(int, bool)
+    +GetByEmailAsync(string, bool)
+    +Add(Customer)
+    +Update(Customer)
+  }
+
+  interface IAddressRepository {
+    +GetByIdAsync(int, bool)
+    +GetByIdAndCustomerIdAsync(int, int, bool)
+    +GetByCustomerIdAsync(int, bool)
+    +QueryByCustomerId(int)
+    +Add(Address)
+    +Update(Address)
+    +Remove(Address)
+  }
+}
+
+package "Catalog and Cart" {
+  interface ICategoryRepository {
+    +ExistsByNameAsync(string, int?)
+    +ExistsByIdAsync(int)
+    +GetByIdAsync(int, bool)
+    +GetAllAsync()
+    +QueryAllActive()
+    +Add(Category)
+    +Update(Category)
+  }
+
+  interface IProductRepository {
+    +ExistsByNameAsync(string, int?)
+    +GetByIdAsync(int, bool)
+    +GetByIdIncludingUnavailableAsync(int, bool)
+    +GetByIdsAsync(IEnumerable<int>, bool)
+    +GetAllAsync()
+    +GetByCategoryAsync(int)
+    +QueryAllAvailable()
+    +QueryByCategory(int)
+    +Add(Product)
+    +Update(Product)
+    +DeductStockAsync(int, int)
+  }
+
+  interface ICartRepository {
+    +GetActiveCartByCustomerIdAsync(int, bool)
+    +GetByIdWithItemsAsync(int)
+    +ExecuteInTransactionAsync(Func<Task<TResult>>)
+    +Add(Cart)
+    +Update(Cart)
+    +Remove(Cart)
+  }
+
+  interface ICartItemRepository {
+    +Add(CartItem)
+    +Update(CartItem)
+    +Remove(CartItem)
+    +RemoveRange(IEnumerable<CartItem>)
+  }
+}
+
+package "Order, Payment, Cancellation, Refund" {
+  interface IOrderRepository {
+    +GetByIdAsync(int, bool)
+    +GetByIdWithDetailsAsync(int, bool)
+    +GetAllWithDetailsAsync(bool)
+    +GetByCustomerIdWithDetailsAsync(int, bool)
+    +GetByIdAndCustomerIdWithPaymentAsync(int, int, bool)
+    +GetOrderWithFullDetailsAsync(int, bool)
+    +GetByIdAndCustomerIdAsync(int, int, bool)
+    +HasCustomerPurchasedAndReceivedProductAsync(int, int)
+    +Add(Order)
+  }
+
+  interface IPaymentRepository {
+    +GetByIdAsync(int, bool)
+    +GetByOrderIdAsync(int, bool)
+    +GetByIdWithOrderAsync(int, bool)
+    +GetByIdAndOrderIdWithOrderAsync(int, int, bool)
+    +Add(Payment)
+  }
+
+  interface ICancellationRepository {
+    +GetByOrderIdAsync(int, bool)
+    +GetByIdAsync(int, bool)
+    +GetByIdWithFullOrderDetailsAsync(int, bool)
+    +GetAllWithOrderAsync(bool)
+    +GetApprovedCancellationsPendingRefundAsync(bool)
+    +GetByIdWithFullDetailsAsync(int, bool)
+    +Add(Cancellation)
+  }
+
+  interface IRefundRepository {
+    +GetByCancellationIdAsync(int, bool)
+    +GetByIdWithFullDetailsAsync(int, bool)
+    +GetByIdWithDetailsAsync(int, bool)
+    +GetAllWithDetailsAsync(bool)
+    +Add(Refund)
+  }
+}
+
+package "Feedback" {
+  interface IFeedbackRepository {
+    +ExistsByCustomerAndProductAsync(int, int)
+    +GetByProductIdWithCustomerAsync(int, bool)
+    +GetAllWithDetailsAsync(bool)
+    +GetByIdAndCustomerIdWithDetailsAsync(int, int, bool)
+    +GetByIdAsync(int, bool)
+    +Add(Feedback)
+    +Remove(Feedback)
+  }
+}
+
+IUnitOfWork <|.. UnitOfWork
+UnitOfWork *-- ApplicationDbContext
+
+IUnitOfWork *-- ICustomerRepository
+IUnitOfWork *-- IAddressRepository
+IUnitOfWork *-- ICategoryRepository
+IUnitOfWork *-- IProductRepository
+IUnitOfWork *-- ICartRepository
+IUnitOfWork *-- ICartItemRepository
+IUnitOfWork *-- IOrderRepository
+IUnitOfWork *-- IPaymentRepository
+IUnitOfWork *-- ICancellationRepository
+IUnitOfWork *-- IFeedbackRepository
+IUnitOfWork *-- IRefundRepository
+
+ICustomerRepository ..> ApplicationDbContext
+IAddressRepository ..> ApplicationDbContext
+ICategoryRepository ..> ApplicationDbContext
+IProductRepository ..> ApplicationDbContext
+ICartRepository ..> ApplicationDbContext
+ICartItemRepository ..> ApplicationDbContext
+IOrderRepository ..> ApplicationDbContext
+IPaymentRepository ..> ApplicationDbContext
+ICancellationRepository ..> ApplicationDbContext
+IRefundRepository ..> ApplicationDbContext
+IFeedbackRepository ..> ApplicationDbContext
+
+@enduml

@@ -1,0 +1,68 @@
+@startuml
+title ECommerce Backend - Catalog Cache Read and Invalidation Sequence
+
+skinparam shadowing false
+
+actor "Guest / Customer" as Client
+actor "Admin" as Admin
+participant "ProductsController\nCategoriesController" as Controller
+participant "ProductService\nCategoryService" as Service
+participant "IDistributedCache" as Cache
+participant "CatalogCacheKeys" as Keys
+participant "UnitOfWork" as Uow
+participant "ProductRepository\nCategoryRepository" as Repo
+database "SQL Server" as DB
+
+== Read by Id ==
+Client -> Controller : GET /api/Products/GetProductById/{id}\nor /api/Categories/GetCategoryById/{id}
+Controller -> Service : Get...ByIdAsync(id)
+
+alt Cache enabled
+  Service -> Cache : GetVersionAsync(entityVersionKey)
+  Cache --> Service : version
+  Service -> Keys : Build versioned cache key
+  Keys --> Service : cache key
+  Service -> Cache : GetJsonAsync(cacheKey)
+  alt cache hit
+    Cache --> Service : ProductResponse / CategoryResponse
+    Service --> Controller : ApiResponse 200
+    Controller --> Client : cached JSON response
+  else cache miss
+    Cache --> Service : null
+    Service -> Repo : GetByIdAsync(id)
+    Repo -> DB : SELECT entity
+    DB --> Repo : entity / null
+    Repo --> Service : entity / null
+    alt found
+      Service -> Cache : SetJsonAsync(cacheKey, response, TTL)
+      Service --> Controller : ApiResponse 200
+      Controller --> Client : JSON response
+    else not found
+      Service --> Controller : ApiResponse 404
+      Controller --> Client : 404 not found
+    end
+  end
+else Cache disabled
+  Service -> Repo : GetByIdAsync(id)
+  Repo -> DB : SELECT entity
+  DB --> Repo : entity / null
+  Repo --> Service : entity / null
+  Service --> Controller : ApiResponse
+  Controller --> Client : JSON response
+end
+
+== Catalog Mutation ==
+Admin -> Controller : POST/PUT/DELETE category or product
+Controller -> Service : Create/Update/Delete/UpdateStatus
+Service -> Repo : validate uniqueness/existence
+Repo -> DB : SELECT validation data
+DB --> Repo : validation result
+Service -> Repo : Add/update soft-delete entity
+Service -> Uow : SaveChangesAsync()
+Uow -> DB : INSERT/UPDATE
+Service -> Cache : RefreshVersionAsync(entityVersionKey)
+Cache --> Service : new version stored
+Service --> Controller : ApiResponse 200
+Controller --> Admin : confirmation
+
+@enduml

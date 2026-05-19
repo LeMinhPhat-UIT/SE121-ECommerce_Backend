@@ -1,0 +1,75 @@
+@startuml
+title ECommerce Backend - Order, Payment, Cancellation, and Refund State Machines
+
+skinparam shadowing false
+
+state "Order lifecycle" as OrderLifecycle {
+  [*] --> O_Pending
+  state "Pending" as O_Pending
+  state "Processing" as O_Processing
+  state "Shipped" as O_Shipped
+  state "Delivered" as O_Delivered
+  state "Canceled" as O_Canceled
+
+  O_Pending --> O_Processing : payment accepted\nor COD started
+  O_Pending --> O_Canceled : admin order update
+  O_Processing --> O_Shipped : admin order update
+  O_Processing --> O_Canceled : approved cancellation\nor admin order update
+  O_Shipped --> O_Delivered : COD completion\nor admin order update
+  O_Delivered --> [*]
+  O_Canceled --> [*]
+}
+
+state "Payment lifecycle" as PaymentLifecycle {
+  [*] --> P_Pending
+  state "Pending" as P_Pending
+  state "Completed" as P_Completed
+  state "Failed" as P_Failed
+  state "Refunded" as P_Refunded
+
+  P_Pending --> P_Completed : gateway completed\nor COD delivered
+  P_Pending --> P_Failed : gateway failed\nor worker marks failed
+  P_Pending --> P_Pending : gateway still pending
+  P_Failed --> P_Pending : customer retries failed payment
+  P_Completed --> P_Refunded : refund completed
+  P_Refunded --> [*]
+}
+
+state "Cancellation lifecycle" as CancellationLifecycle {
+  [*] --> C_Pending
+  state "Pending" as C_Pending
+  state "Approved" as C_Approved
+  state "Rejected" as C_Rejected
+
+  C_Pending --> C_Approved : admin approves
+  C_Pending --> C_Rejected : admin rejects
+  C_Approved --> [*]
+  C_Rejected --> [*]
+}
+
+state "Refund lifecycle" as RefundLifecycle {
+  [*] --> R_Pending
+  state "Pending" as R_Pending
+  state "Completed" as R_Completed
+  state "Failed" as R_Failed
+
+  R_Pending --> R_Completed : gateway success
+  R_Pending --> R_Failed : gateway failure
+  R_Pending --> R_Pending : gateway pending
+  R_Failed --> R_Completed : manual update\nor background retry succeeds
+  R_Failed --> R_Failed : retry still fails
+  R_Completed --> [*]
+}
+
+P_Completed ..> O_Processing : sets order processing
+C_Approved ..> O_Canceled : cancels order\nand restores stock
+R_Completed ..> P_Refunded : updates payment status
+
+note bottom
+  OrderService enforces allowed order transitions:
+  Pending -> Processing/Canceled,
+  Processing -> Shipped/Canceled,
+  Shipped -> Delivered.
+end note
+
+@enduml

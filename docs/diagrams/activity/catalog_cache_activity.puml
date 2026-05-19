@@ -1,0 +1,34 @@
+@startuml
+title ECommerce Backend - Catalog Cache Activity Diagram
+
+skinparam shadowing false
+
+start
+:Receive catalog read request\nProductById or CategoryById;
+if (Cache enabled?) then (yes)
+  :Read catalog version key;
+  :Build versioned cache key;
+  :Read JSON response from distributed cache;
+  if (Cache hit?) then (yes)
+    :Return cached ApiResponse 200;
+    stop
+  else (no)
+    :Query repository by id;
+  endif
+else (no)
+  :Query repository by id;
+endif
+
+if (Entity found?) then (yes)
+  :Map entity to response DTO;
+  if (Cache enabled?) then (yes)
+    :Store response JSON with catalog TTL;
+  endif
+  :Return ApiResponse 200;
+  stop
+else (no)
+  :Return ApiResponse 404;
+  stop
+endif
+
+@enduml

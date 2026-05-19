@@ -1,0 +1,213 @@
+@startuml
+title ECommerce Backend - API Controller and Service Contract Diagram
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+package "Controller Layer" {
+  class CustomersController {
+    +RegisterCustomer(CustomerRegistrationRequest)
+    +Login(LoginRequest)
+    +GetCustomerById(int)
+    +UpdateCustomer(CustomerUpdateRequest)
+    +DeleteCustomer(int)
+    +ChangePassword(ChangePasswordRequest)
+  }
+
+  class AddressesController {
+    +CreateAddress(AddressCreateRequest)
+    +GetAddressById(int)
+    +UpdateAddress(AddressUpdateRequest)
+    +DeleteAddress(AddressDeleteRequest)
+    +GetAddressesByCustomer(int, PaginationRequest)
+  }
+
+  class CategoriesController {
+    +CreateCategory(CategoryCreateRequest)
+    +GetCategoryById(int)
+    +UpdateCategory(CategoryUpdateRequest)
+    +DeleteCategory(int)
+    +GetAllCategories(PaginationRequest)
+  }
+
+  class ProductsController {
+    +CreateProduct(ProductCreateRequest)
+    +GetProductById(int)
+    +UpdateProduct(ProductUpdateRequest)
+    +DeleteProduct(int)
+    +GetAllProducts(PaginationRequest)
+    +GetAllProductsByCategory(int, PaginationRequest)
+    +UpdateProductStatus(ProductStatusUpdateRequest)
+  }
+
+  class CartsController {
+    +GetCartByCustomerId(int)
+    +AddToCart(AddToCartRequest)
+    +UpdateCartItem(UpdateCartItemRequest)
+    +RemoveCartItem(RemoveCartItemDTO)
+    +ClearCart(int)
+  }
+
+  class OrdersController {
+    +CreateOrder(OrderCreateRequest)
+    +GetOrderById(int)
+    +UpdateOrderStatus(OrderStatusUpdateRequest)
+    +GetAllOrders()
+    +GetOrdersByCustomer(int)
+  }
+
+  class PaymentsController {
+    +ProcessPayment(PaymentRequest)
+    +GetPaymentById(int)
+    +GetPaymentByOrderId(int)
+    +UpdatePaymentStatus(PaymentStatusUpdateRequest)
+    +CompleteCODPayment(CODPaymentUpdateRequest)
+  }
+
+  class CancellationsController {
+    +RequestCancellation(CancellationRequest)
+    +GetAllCancellations()
+    +GetCancellationById(int)
+    +UpdateCancellationStatus(CancellationStatusUpdateRequest)
+  }
+
+  class RefundsController {
+    +GetEligibleRefunds()
+    +ProcessRefund(RefundRequest)
+    +UpdateRefundStatus(RefundStatusUpdateRequest)
+    +GetRefundById(int)
+    +GetAllRefunds()
+  }
+
+  class FeedbackController {
+    +SubmitFeedback(FeedbackCreateRequest)
+    +GetFeedbackForProduct(int)
+    +GetAllFeedback()
+    +UpdateFeedback(FeedbackUpdateRequest)
+    +DeleteFeedback(FeedbackDeleteRequest)
+  }
+}
+
+package "Service Contracts" {
+  interface ICustomerService {
+    +RegisterCustomerAsync(CustomerRegistrationRequest)
+    +LoginAsync(LoginRequest)
+    +GetCustomerByIdAsync(int)
+    +UpdateCustomerAsync(CustomerUpdateRequest)
+    +DeleteCustomerAsync(int)
+    +ChangePasswordAsync(ChangePasswordRequest)
+  }
+
+  interface IAddressService {
+    +CreateAddressAsync(AddressCreateRequest)
+    +GetAddressByIdAsync(int, int, bool)
+    +UpdateAddressAsync(AddressUpdateRequest)
+    +DeleteAddressAsync(AddressDeleteRequest)
+    +GetAddressesByCustomerAsync(int, PaginationRequest)
+  }
+
+  interface ICategoryService {
+    +CreateCategoryAsync(CategoryCreateRequest)
+    +GetCategoryByIdAsync(int)
+    +UpdateCategoryAsync(CategoryUpdateRequest)
+    +DeleteCategoryAsync(int)
+    +GetAllCategoriesAsync(PaginationRequest)
+  }
+
+  interface IProductService {
+    +CreateProductAsync(ProductCreateRequest)
+    +GetProductByIdAsync(int)
+    +UpdateProductAsync(ProductUpdateRequest)
+    +DeleteProductAsync(int)
+    +GetAllProductsAsync(PaginationRequest)
+    +GetAllProductsByCategoryAsync(int, PaginationRequest)
+    +UpdateProductStatusAsync(ProductStatusUpdateRequest)
+  }
+
+  interface IShoppingCartService {
+    +GetCartByCustomerIdAsync(int)
+    +AddToCartAsync(AddToCartRequest)
+    +UpdateCartItemAsync(UpdateCartItemRequest)
+    +RemoveCartItemAsync(RemoveCartItemDTO)
+    +ClearCartAsync(int)
+  }
+
+  interface IOrderService {
+    +CreateOrderAsync(OrderCreateRequest)
+    +GetOrderByIdAsync(int)
+    +UpdateOrderStatusAsync(OrderStatusUpdateRequest)
+    +GetAllOrdersAsync()
+    +GetOrdersByCustomerAsync(int)
+  }
+
+  interface IPaymentService {
+    +ProcessPaymentAsync(PaymentRequest)
+    +GetPaymentByIdAsync(int)
+    +GetPaymentByOrderIdAsync(int)
+    +UpdatePaymentStatusAsync(PaymentStatusUpdateRequest)
+    +CompleteCodPaymentAsync(CODPaymentUpdateRequest)
+  }
+
+  interface ICancellationService {
+    +RequestCancellationAsync(CancellationRequest)
+    +GetCancellationByIdAsync(int)
+    +UpdateCancellationStatusAsync(CancellationStatusUpdateRequest)
+    +GetAllCancellationsAsync()
+  }
+
+  interface IRefundService {
+    +GetEligibleRefundsAsync()
+  }
+
+  interface IFeedbackService {
+    +SubmitFeedbackAsync(FeedbackCreateRequest)
+    +GetFeedbackForProductAsync(int)
+    +GetAllFeedbackAsync()
+    +UpdateFeedbackAsync(FeedbackUpdateRequest)
+    +DeleteFeedbackAsync(FeedbackDeleteRequest)
+  }
+}
+
+package "Concrete Services" {
+  class CustomerService
+  class AddressService
+  class CategoryService
+  class ProductService
+  class ShoppingCartService
+  class OrderService
+  class PaymentService
+  class CancellationService
+  class RefundService
+  class FeedbackService
+}
+
+CustomersController ..> ICustomerService
+AddressesController ..> IAddressService
+CategoriesController ..> ICategoryService
+ProductsController ..> IProductService
+CartsController ..> IShoppingCartService
+OrdersController ..> OrderService
+PaymentsController ..> PaymentService
+CancellationsController ..> CancellationService
+RefundsController ..> RefundService
+FeedbackController ..> FeedbackService
+
+ICustomerService <|.. CustomerService
+IAddressService <|.. AddressService
+ICategoryService <|.. CategoryService
+IProductService <|.. ProductService
+IShoppingCartService <|.. ShoppingCartService
+IOrderService <|.. OrderService
+IPaymentService <|.. PaymentService
+ICancellationService <|.. CancellationService
+IRefundService <|.. RefundService
+IFeedbackService <|.. FeedbackService
+
+note bottom of IRefundService
+  IRefundService currently declares only GetEligibleRefundsAsync,
+  while RefundService also implements ProcessRefundAsync,
+  UpdateRefundStatusAsync, GetRefundByIdAsync, and GetAllRefundsAsync.
+end note
+
+@enduml

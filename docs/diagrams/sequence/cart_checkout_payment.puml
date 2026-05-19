@@ -1,0 +1,104 @@
+@startuml
+title ECommerce Backend - Cart, Checkout, and Payment Sequence
+
+skinparam shadowing false
+
+actor "Customer" as Customer
+participant "CartsController" as Carts
+participant "ShoppingCartService" as CartService
+participant "OrdersController" as Orders
+participant "OrderService" as OrderService
+participant "PaymentsController" as Payments
+participant "PaymentService" as PaymentService
+participant "UnitOfWork + Repositories" as Uow
+database "SQL Server" as DB
+participant "Payment Gateway Simulator" as Gateway
+participant "EmailService" as Email
+participant "SMTP Server" as SMTP
+
+== Add to cart ==
+Customer -> Carts : POST /api/Carts/AddToCart
+Carts -> Carts : Check JWT customer_id or Admin role
+Carts -> CartService : AddToCartAsync(request)
+CartService -> Uow : Get product and active cart
+Uow -> DB : SELECT Product, Cart, CartItems
+DB --> Uow : entities
+
+alt product missing or stock exceeded
+  CartService --> Carts : ApiResponse 404/400
+  Carts --> Customer : error response
+else cart can be updated
+  CartService -> Uow : create cart or update cart item
+  CartService -> Uow : SaveChangesAsync()
+  Uow -> DB : INSERT/UPDATE Cart, CartItem
+  CartService --> Carts : ApiResponse 200 CartResponse
+  Carts --> Customer : updated cart
+end
+
+== Checkout order ==
+Customer -> Orders : POST /api/Orders/CreateOrder
+Orders -> OrderService : CreateOrderAsync(orderRequest)
+OrderService -> Uow : BeginTransactionAsync()
+OrderService -> Uow : validate customer and addresses
+Uow -> DB : SELECT Customer, BillingAddress, ShippingAddress
+DB --> Uow : validation data
+
+loop each requested item
+  OrderService -> Uow : load product and deduct stock
+  Uow -> DB : SELECT Product; UPDATE StockQuantity
+  alt stock conflict
+    OrderService -> Uow : RollbackTransactionAsync()
+    OrderService --> Orders : ApiResponse 409
+    Orders --> Customer : stock conflict
+  end
+end
+
+OrderService -> OrderService : calculate base amount, discount, shipping, total
+OrderService -> Uow : Add Order and OrderItems
+OrderService -> Uow : Mark active Cart.IsCheckedOut = true
+OrderService -> Uow : SaveChangesAsync()
+Uow -> DB : INSERT Order/OrderItems; UPDATE Cart/Product
+OrderService -> Uow : CommitTransactionAsync()
+OrderService --> Orders : ApiResponse 200 OrderResponse
+Orders --> Customer : order created with Pending status
+
+== Process payment ==
+Customer -> Payments : POST /api/Payments/ProcessPayment
+Payments -> PaymentService : ProcessPaymentAsync(paymentRequest)
+PaymentService -> Uow : BeginTransactionAsync()
+PaymentService -> Uow : Get order by orderId + customerId with payment
+Uow -> DB : SELECT Order + Payment
+DB --> Uow : order
+
+alt invalid order or amount mismatch
+  PaymentService --> Payments : ApiResponse 404/400
+  Payments --> Customer : error response
+else valid payment request
+  PaymentService -> Uow : create or reset payment to Pending
+  alt non-COD payment
+    PaymentService -> Gateway : SimulatePaymentGateway()
+    Gateway --> PaymentService : Completed / Pending / Failed
+    alt Completed
+      PaymentService -> PaymentService : set TransactionId
+      PaymentService -> Uow : set Payment.Completed and Order.Processing
+    else Pending or Failed
+      PaymentService -> Uow : persist simulated payment status
+    end
+  else CashOnDelivery
+    PaymentService -> Uow : keep payment Pending and set Order.Processing
+  end
+
+  PaymentService -> Uow : SaveChangesAsync()
+  Uow -> DB : INSERT/UPDATE Payment and Order
+  PaymentService -> Uow : CommitTransactionAsync()
+
+  alt order is Processing
+    PaymentService -> Email : SendOrderConfirmationEmailAsync(orderId)
+    Email -> SMTP : Send invoice email
+  end
+
+  PaymentService --> Payments : ApiResponse 200 PaymentResponse
+  Payments --> Customer : payment status
+end
+
+@enduml

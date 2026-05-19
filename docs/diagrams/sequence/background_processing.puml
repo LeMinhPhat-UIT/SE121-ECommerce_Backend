@@ -1,0 +1,77 @@
+@startuml
+title ECommerce Backend - Background Processing Sequence
+
+skinparam shadowing false
+
+participant "PendingPaymentService" as PendingWorker
+participant "RefundProcessingBackgroundService" as RefundWorker
+participant "IServiceProvider\nScoped DI" as DI
+participant "ApplicationDbContext" as Db
+database "SQL Server" as SQL
+participant "PaymentService" as PaymentService
+participant "RefundService" as RefundService
+participant "EmailService" as Email
+participant "SMTP Server" as SMTP
+participant "Payment Gateway Simulator" as Gateway
+
+== Pending non-COD payments ==
+loop every 5 minutes while app is running
+  PendingWorker -> DI : CreateScope()
+  DI --> PendingWorker : scoped services
+  PendingWorker -> Db : query Pending non-COD payments with orders
+  Db -> SQL : SELECT Payments WHERE Status=Pending AND Method<>COD
+  SQL --> Db : pending payments
+  Db --> PendingWorker : payment list
+
+  loop each pending payment
+    PendingWorker -> PendingWorker : Simulate gateway status
+    alt Completed
+      PendingWorker -> Db : set Payment.Completed and Order.Processing
+      PendingWorker -> PendingWorker : remember orderId for email
+    else Failed
+      PendingWorker -> Db : set Payment.Failed
+    else still Pending
+      PendingWorker -> Db : no state change
+    end
+  end
+
+  PendingWorker -> Db : SaveChangesAsync()
+  Db -> SQL : UPDATE payments/orders
+  alt any order moved to Processing
+    PendingWorker -> DI : Get PaymentService
+    loop each completed order
+      PendingWorker -> PaymentService : SendOrderConfirmationEmailAsync(orderId)
+      PaymentService -> Email : SendEmailAsync()
+      Email -> SMTP : order confirmation email
+    end
+  end
+end
+
+== Pending or failed refunds ==
+loop every 5 minutes while app is running
+  RefundWorker -> DI : CreateScope()
+  DI --> RefundWorker : DbContext, EmailService, RefundService
+  RefundWorker -> Db : query Pending or Failed refunds
+  Db -> SQL : SELECT Refunds with Cancellation, Order, Customer, Payment
+  SQL --> Db : refund list
+  Db --> RefundWorker : refunds
+
+  loop each refund
+    RefundWorker -> RefundService : ProcessRefundPaymentAsync(refund)
+    RefundService -> Gateway : simulate refund settlement
+    Gateway --> RefundService : PaymentGatewayRefundResponse
+    alt success
+      RefundWorker -> Db : set Refund.Completed and Payment.Refunded
+      RefundWorker -> Db : SaveChangesAsync()
+      Db -> SQL : UPDATE Refund and Payment
+      RefundWorker -> Email : SendEmailAsync(success email)
+      Email -> SMTP : refund success email
+    else failed or still pending
+      RefundWorker -> Db : set refund status from gateway
+      RefundWorker -> Db : SaveChangesAsync()
+      Db -> SQL : UPDATE Refund
+    end
+  end
+end
+
+@enduml

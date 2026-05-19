@@ -1,0 +1,388 @@
+@startuml
+title ECommerce Backend - DTO and Response Contract Diagram
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+package "Common Contracts" {
+  class "ApiResponse<T>" as ApiResponseT {
+    +StatusCode : int
+    +Success : bool
+    +Data : T
+    +Errors : List<string>
+  }
+  class "PagedResult<T>" as PagedResultT {
+    +Items : IEnumerable<T>
+    +PaginationRequest : PaginationRequest
+    +TotalCount : int
+  }
+  class PaginationRequest {
+    +PageSize : int = 10
+    +PageIndex : int = 1
+  }
+  class ConfirmationResponse {
+    +Message : string
+  }
+}
+
+package "Customer DTOs" {
+  class CustomerRegistrationRequest {
+    +FirstName : string
+    +LastName : string
+    +Email : string
+    +PhoneNumber : string
+    +DateOfBirth : DateTime
+    +Password : string
+  }
+  class LoginRequest {
+    +Email : string
+    +Password : string
+  }
+  class LoginResponse {
+    +CustomerId : int
+    +CustomerName : string
+    +Message : string
+    +AccessToken : string
+    +ExpiresAtUtc : DateTime
+    +Role : string
+  }
+  class CustomerUpdateRequest {
+    +CustomerId : int
+    +FirstName : string
+    +LastName : string
+    +Email : string
+    +PhoneNumber : string
+    +DateOfBirth : DateTime
+  }
+  class ChangePasswordRequest {
+    +CustomerId : int
+    +CurrentPassword : string
+    +NewPassword : string
+    +ConfirmNewPassword : string
+  }
+  class CustomerResponse {
+    +Id : int
+    +FirstName : string
+    +LastName : string
+    +Email : string
+    +PhoneNumber : string
+    +DateOfBirth : DateTime
+  }
+}
+
+package "Address DTOs" {
+  class AddressCreateRequest {
+    +CustomerId : int
+    +AddressLine1 : string
+    +AddressLine2 : string
+    +City : string
+    +State : string
+    +PostalCode : string
+    +Country : string
+  }
+  class AddressUpdateRequest {
+    +AddressId : int
+    +CustomerId : int
+    +AddressLine1 : string
+    +AddressLine2 : string
+    +City : string
+    +State : string
+    +PostalCode : string
+    +Country : string
+  }
+  class AddressDeleteRequest {
+    +CustomerId : int
+    +AddressId : int
+  }
+  class AddressResponse {
+    +Id : int
+    +CustomerId : int
+    +AddressLine1 : string
+    +AddressLine2 : string
+    +City : string
+    +State : string
+    +PostalCode : string
+    +Country : string
+  }
+}
+
+package "Catalog DTOs" {
+  class CategoryCreateRequest {
+    +Name : string
+    +Description : string
+  }
+  class CategoryUpdateRequest {
+    +Id : int
+    +Name : string
+    +Description : string
+  }
+  class CategoryResponse {
+    +Id : int
+    +Name : string
+    +Description : string
+    +IsActive : bool
+  }
+  class ProductCreateRequest {
+    +Name : string
+    +Description : string
+    +Price : decimal
+    +StockQuantity : int
+    +ImageUrl : string
+    +DiscountPercentage : int
+    +CategoryId : int
+  }
+  class ProductUpdateRequest {
+    +Id : int
+    +Name : string
+    +Description : string
+    +Price : decimal
+    +StockQuantity : int
+    +ImageUrl : string
+    +DiscountPercentage : int
+    +CategoryId : int
+  }
+  class ProductStatusUpdateRequest {
+    +ProductId : int
+    +IsAvailable : bool
+  }
+  class ProductResponse {
+    +Id : int
+    +Name : string
+    +Description : string
+    +Price : decimal
+    +StockQuantity : int
+    +ImageUrl : string
+    +DiscountPercentage : int
+    +CategoryId : int
+    +IsAvailable : bool
+  }
+}
+
+package "Cart DTOs" {
+  class AddToCartRequest {
+    +CustomerId : int
+    +ProductId : int
+    +Quantity : int
+  }
+  class UpdateCartItemRequest {
+    +CustomerId : int
+    +CartItemId : int
+    +Quantity : int
+  }
+  class RemoveCartItemDTO {
+    +CustomerId : int
+    +CartItemId : int
+  }
+  class CartResponse {
+    +Id : int
+    +CustomerId : int?
+    +IsCheckedOut : bool
+    +CreatedAt : DateTime
+    +UpdatedAt : DateTime
+    +TotalBasePrice : decimal
+    +TotalDiscount : decimal
+    +TotalAmount : decimal
+    +CartItems : List<CartItemResponse>?
+  }
+  class CartItemResponse {
+    +Id : int
+    +ProductId : int
+    +ProductName : string?
+    +Quantity : int
+    +UnitPrice : decimal
+    +Discount : decimal
+    +TotalPrice : decimal
+  }
+}
+
+package "Order and Payment DTOs" {
+  class OrderCreateRequest {
+    +CustomerId : int
+    +BillingAddressId : int
+    +ShippingAddressId : int
+    +OrderItems : List<OrderItemCreateRequest>
+  }
+  class OrderItemCreateRequest {
+    +ProductId : int
+    +Quantity : int
+  }
+  class OrderStatusUpdateRequest {
+    +OrderId : int
+    +OrderStatus : OrderStatus
+  }
+  class OrderResponse {
+    +Id : int
+    +OrderNumber : string
+    +OrderDate : DateTime
+    +CustomerId : int
+    +BillingAddressId : int
+    +ShippingAddressId : int
+    +TotalBaseAmount : decimal
+    +TotalDiscountAmount : decimal
+    +ShippingCost : decimal
+    +TotalAmount : decimal
+    +OrderStatus : OrderStatus
+    +OrderItems : List<OrderItemResponse>
+  }
+  class OrderItemResponse {
+    +Id : int
+    +ProductId : int
+    +Quantity : int
+    +UnitPrice : decimal
+    +Discount : decimal
+    +TotalPrice : decimal
+  }
+  class PaymentRequest {
+    +CustomerId : int
+    +OrderId : int
+    +PaymentMethod : string
+    +Amount : decimal
+  }
+  class PaymentStatusUpdateRequest {
+    +PaymentId : int
+    +TransactionId : string?
+    +Status : PaymentStatus
+  }
+  class CODPaymentUpdateRequest {
+    +OrderId : int
+    +PaymentId : int
+  }
+  class PaymentResponse {
+    +PaymentId : int
+    +OrderId : int
+    +CustomerId : int
+    +PaymentMethod : string
+    +TransactionId : string?
+    +Amount : decimal
+    +PaymentDate : DateTime
+    +Status : PaymentStatus
+  }
+}
+
+package "Cancellation, Refund, Feedback DTOs" {
+  class CancellationRequest {
+    +CustomerId : int
+    +OrderId : int
+    +Reason : string
+  }
+  class CancellationStatusUpdateRequest {
+    +CancellationId : int
+    +Status : CancellationStatus
+    +ProcessedBy : int?
+    +CancellationCharges : decimal?
+    +Remarks : string
+  }
+  class CancellationResponse {
+    +Id : int
+    +OrderId : int
+    +Reason : string
+    +Status : CancellationStatus
+    +RequestedAt : DateTime
+    +ProcessedAt : DateTime?
+    +ProcessedBy : int?
+    +OrderAmount : decimal
+    +CancellationCharges : decimal?
+    +Remarks : string?
+  }
+  class RefundRequest {
+    +CancellationId : int
+    +RefundMethod : RefundMethod
+    +RefundReason : string?
+    +ProcessedBy : int
+  }
+  class RefundStatusUpdateRequest {
+    +RefundId : int
+    +TransactionId : string
+    +RefundMethod : RefundMethod
+    +RefundReason : string?
+    +ProcessedBy : int?
+  }
+  class RefundResponse {
+    +Id : int
+    +CancellationId : int
+    +PaymentId : int
+    +Amount : decimal
+    +Status : RefundStatus
+    +InitiatedAt : DateTime
+    +CompletedAt : DateTime?
+    +TransactionId : string?
+    +RefundMethod : RefundMethod
+    +RefundReason : string?
+  }
+  class PendingRefundResponse {
+    +CancellationId : int
+    +OrderId : int
+    +OrderAmount : decimal
+    +CancellationCharge : decimal
+    +ComputedRefundAmount : decimal
+    +CancellationRemarks : string?
+  }
+  class PaymentGatewayRefundResponse {
+    +IsSuccess : bool
+    +Status : RefundStatus
+    +TransactionId : string
+  }
+  class FeedbackCreateRequest {
+    +CustomerId : int
+    +ProductId : int
+    +Rating : int
+    +Comment : string
+  }
+  class FeedbackUpdateRequest {
+    +FeedbackId : int
+    +CustomerId : int
+    +Rating : int
+    +Comment : string
+  }
+  class FeedbackDeleteRequest {
+    +FeedbackId : int
+    +CustomerId : int
+  }
+  class FeedbackResponse {
+    +Id : int
+    +CustomerId : int
+    +CustomerName : string
+    +ProductId : int
+    +ProductName : string
+    +Rating : int
+    +Comment : string?
+    +CreatedAt : DateTime
+    +UpdatedAt : DateTime
+  }
+  class ProductFeedbackResponse {
+    +ProductId : int
+    +ProductName : string
+    +AverageRating : double
+    +Feedbacks : List<CustomerFeedback>
+  }
+  class CustomerFeedback {
+    +Id : int
+    +CustomerId : int
+    +CustomerName : string
+    +Rating : int
+    +Comment : string?
+    +CreatedAt : DateTime
+    +UpdatedAt : DateTime
+  }
+}
+
+PagedResultT *-- PaginationRequest
+OrderCreateRequest *-- OrderItemCreateRequest
+OrderResponse *-- OrderItemResponse
+CartResponse *-- CartItemResponse
+ProductFeedbackResponse *-- CustomerFeedback
+
+OrderStatusUpdateRequest ..> OrderStatus
+OrderResponse ..> OrderStatus
+PaymentStatusUpdateRequest ..> PaymentStatus
+PaymentResponse ..> PaymentStatus
+CancellationStatusUpdateRequest ..> CancellationStatus
+CancellationResponse ..> CancellationStatus
+RefundRequest ..> RefundMethod
+RefundStatusUpdateRequest ..> RefundMethod
+RefundResponse ..> RefundMethod
+RefundResponse ..> RefundStatus
+PaymentGatewayRefundResponse ..> RefundStatus
+
+@enduml

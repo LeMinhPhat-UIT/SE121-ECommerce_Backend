@@ -1,0 +1,79 @@
+@startuml
+title ECommerce Backend - Category and Product Management Sequence
+
+skinparam shadowing false
+
+actor "Guest / Customer" as Reader
+actor "Admin" as Admin
+participant "CategoriesController\nProductsController" as Controller
+participant "CategoryService\nProductService" as Service
+participant "CategoryMapper\nProductMapper" as Mapper
+participant "IDistributedCache" as Cache
+participant "CatalogCacheKeys" as CacheKeys
+participant "UnitOfWork" as Uow
+participant "CategoryRepository\nProductRepository" as Repo
+database "SQL Server" as DB
+
+== Public paged catalog reads ==
+Reader -> Controller : GET all categories/products\nor products by category
+Controller -> Service : GetAll...Async(pagination)
+Service -> Service : normalize PageIndex/PageSize
+Service -> Repo : QueryAllActive/QueryAllAvailable/QueryByCategory
+Repo -> DB : SELECT count + paged rows
+DB --> Repo : entities + total count
+Service -> Mapper : Map each entity
+Service --> Controller : PagedResult response
+Controller --> Reader : JSON page
+
+== Read by id with cache ==
+Reader -> Controller : GET category/product by id
+Controller -> Service : Get...ByIdAsync(id)
+Service -> Cache : GetVersionAsync(versionKey)
+Cache --> Service : version
+Service -> CacheKeys : Build key for id + version
+Service -> Cache : GetJsonAsync(cacheKey)
+alt cache hit
+  Cache --> Service : response DTO
+else cache miss or cache disabled
+  Service -> Repo : GetByIdAsync(id)
+  Repo -> DB : SELECT entity
+  DB --> Repo : entity / null
+  alt found
+    Service -> Mapper : Map(entity)
+    Service -> Cache : SetJsonAsync(cacheKey, response, TTL)
+  else not found
+    Service --> Controller : ApiResponse 404
+  end
+end
+Service --> Controller : ApiResponse
+Controller --> Reader : JSON response
+
+== Admin catalog mutation ==
+Admin -> Controller : POST/PUT/DELETE/UpdateStatus
+Controller -> Service : Create/Update/Delete/UpdateStatus
+alt category mutation
+  Service -> Repo : CategoryRepository.ExistsByName/GetById
+  Repo -> DB : SELECT Category validation data
+  Service -> Mapper : Map create/update request if needed
+  Service -> Repo : Add or update Category.IsActive
+else product mutation
+  Service -> Repo : ProductRepository.ExistsByName/GetById
+  Service -> Repo : CategoryRepository.ExistsById(categoryId)
+  Repo -> DB : SELECT Product/Category validation data
+  Service -> Mapper : Map create/update request if needed
+  Service -> Repo : Add or update Product fields/IsAvailable
+end
+
+alt validation fails
+  Service --> Controller : ApiResponse 400/404
+  Controller --> Admin : validation error
+else valid mutation
+  Service -> Uow : SaveChangesAsync()
+  Uow -> DB : INSERT/UPDATE soft-delete/status changes
+  Service -> Cache : RefreshVersionAsync(category/product version key)
+  Cache --> Service : new version
+  Service --> Controller : ApiResponse 200
+  Controller --> Admin : response DTO or confirmation
+end
+
+@enduml

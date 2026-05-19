@@ -1,0 +1,65 @@
+@startuml
+title ECommerce Backend - Customer Registration and Login Sequence
+
+skinparam shadowing false
+
+actor "Guest / Customer" as User
+participant "CustomersController" as Controller
+participant "CustomerService" as Service
+participant "CustomerMapper" as Mapper
+participant "UnitOfWork" as Uow
+participant "CustomerRepository" as Repo
+database "SQL Server" as DB
+participant "BCrypt" as BCrypt
+participant "JWT Token Handler" as Jwt
+
+== Register ==
+User -> Controller : POST /api/Customers/RegisterCustomer
+Controller -> Service : RegisterCustomerAsync(request)
+Service -> Repo : ExistsByEmailAsync(email)
+Repo -> DB : SELECT customer by email
+DB --> Repo : exists / not exists
+Repo --> Service : result
+
+alt email already exists
+  Service --> Controller : ApiResponse 400
+  Controller --> User : 400 Email is already in use
+else new email
+  Service -> Mapper : Map(request)
+  Mapper --> Service : Customer entity
+  Service -> BCrypt : HashPassword(password)
+  BCrypt --> Service : password hash
+  Service -> Repo : Add(customer)
+  Service -> Uow : SaveChangesAsync()
+  Uow -> DB : INSERT Customer
+  DB --> Uow : generated Id
+  Service -> Mapper : Map(customer)
+  Mapper --> Service : CustomerResponse
+  Service --> Controller : ApiResponse 200
+  Controller --> User : 200 CustomerResponse
+end
+
+== Login ==
+User -> Controller : POST /api/Customers/Login
+Controller -> Service : LoginAsync(request)
+Service -> Repo : GetByEmailAsync(email)
+Repo -> DB : SELECT customer by email
+DB --> Repo : Customer?
+Repo --> Service : customer
+
+alt customer missing or password invalid
+  Service -> BCrypt : Verify(password, hash)
+  BCrypt --> Service : false
+  Service --> Controller : ApiResponse 401
+  Controller --> User : 401 Invalid email or password
+else valid credentials
+  Service -> BCrypt : Verify(password, hash)
+  BCrypt --> Service : true
+  Service -> Service : Derive role from Jwt:AdminEmails
+  Service -> Jwt : Create signed JWT claims
+  Jwt --> Service : access token
+  Service --> Controller : ApiResponse 200 LoginResponse
+  Controller --> User : accessToken, customerId, role, expiresAtUtc
+end
+
+@enduml

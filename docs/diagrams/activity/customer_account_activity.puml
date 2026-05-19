@@ -1,0 +1,68 @@
+@startuml
+title ECommerce Backend - Customer Account Activity Diagram
+
+skinparam shadowing false
+
+start
+:Receive customer account request;
+if (Endpoint is Register or Login?) then (anonymous)
+  if (Register?) then (yes)
+    :Check email uniqueness;
+    if (Email already exists?) then (yes)
+      :Return 400;
+      stop
+    else (no)
+      :Map registration DTO to Customer;
+      :Hash password with BCrypt;
+      :Set IsActive = true;
+      :Save customer;
+      :Return CustomerResponse;
+      stop
+    endif
+  else (login)
+    :Load customer by email;
+    :Verify password with BCrypt;
+    if (Credentials valid?) then (yes)
+      :Derive role from Jwt:AdminEmails;
+      :Generate signed JWT;
+      :Return LoginResponse;
+      stop
+    else (no)
+      :Return 401 invalid credentials;
+      stop
+    endif
+  endif
+else (protected)
+  :Validate JWT;
+  :Read customer_id and role claims;
+  if (Admin or owner?) then (yes)
+    if (ChangePassword?) then (yes)
+      :Verify current password;
+      if (Current password valid?) then (yes)
+        :Hash new password;
+        :Save password;
+        :Return confirmation;
+      else (no)
+        :Return 401;
+      endif
+    elseif (DeleteCustomer?) then (yes)
+      :Set IsActive = false;
+      :Save customer;
+      :Return confirmation;
+    elseif (UpdateCustomer?) then (yes)
+      :Validate email uniqueness;
+      :Update customer fields;
+      :Save customer;
+      :Return confirmation;
+    else (GetCustomerById)
+      :Load active customer;
+      :Map to CustomerResponse;
+      :Return response;
+    endif
+  else (no)
+    :Return 403 Forbidden;
+  endif
+endif
+stop
+
+@enduml

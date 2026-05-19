@@ -1,0 +1,56 @@
+@startuml
+title ECommerce Backend - Request Pipeline, Logging, and Error Handling Sequence
+
+skinparam shadowing false
+
+actor "API Client" as Client
+participant "ASP.NET Core Host" as Host
+participant "LoggingMiddleware" as Logging
+participant "ErrorHandlingMiddleware" as ErrorHandling
+participant "Serilog Request Logging" as SerilogReq
+participant "JWT Authentication" as Auth
+participant "Authorization" as Authorization
+participant "ControllerActionLoggingFilter" as ActionFilter
+participant "Controller Action" as Controller
+participant "Service Layer" as Service
+participant "Repository / DbContext" as Persistence
+database "SQL Server" as SQL
+database "Elasticsearch" as ES
+
+Client -> Host : HTTP request
+Host -> Logging : UseLoggingMiddleware()
+Logging -> ErrorHandling : next()
+ErrorHandling -> SerilogReq : next()
+SerilogReq -> Auth : next()
+Auth -> Auth : validate bearer token if required
+Auth -> Authorization : ClaimsPrincipal
+Authorization -> ActionFilter : authorize endpoint
+ActionFilter -> ActionFilter : log action entry
+ActionFilter -> Controller : execute action
+Controller -> Service : call business use case
+Service -> Persistence : repository query/save
+Persistence -> SQL : EF Core command/query
+SQL --> Persistence : result
+Persistence --> Service : entity/result
+Service --> Controller : ApiResponse<T>
+Controller --> ActionFilter : ActionResult
+ActionFilter -> ActionFilter : log action exit
+ActionFilter --> Authorization : response
+Authorization --> Auth : response
+Auth --> SerilogReq : response
+SerilogReq -> ES : write structured request log
+SerilogReq --> ErrorHandling : response
+ErrorHandling --> Logging : response
+Logging -> ES : write request/response details
+Logging --> Host : response
+Host --> Client : JSON response
+
+alt unexpected exception in controller/service/persistence
+  Service --> Controller : throw exception
+  Controller --> ActionFilter : exception
+  ActionFilter --> ErrorHandling : exception bubbles
+  ErrorHandling -> ES : log exception details
+  ErrorHandling --> Client : standardized error response
+end
+
+@enduml

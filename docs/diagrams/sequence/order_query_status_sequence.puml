@@ -1,0 +1,77 @@
+@startuml
+title ECommerce Backend - Order Query and Status Management Sequence
+
+skinparam shadowing false
+
+actor "Customer / Admin" as Actor
+actor "Admin" as Admin
+participant "OrdersController" as Controller
+participant "OrderService" as Service
+participant "UnitOfWork" as Uow
+participant "CustomerRepository" as CustomerRepo
+participant "OrderRepository" as OrderRepo
+database "SQL Server" as DB
+
+== Get order by id ==
+Actor -> Controller : GET /api/Orders/GetOrderById/{id}
+Controller -> Service : GetOrderByIdAsync(id)
+Service -> OrderRepo : GetByIdWithDetailsAsync(id)
+OrderRepo -> DB : SELECT Order + Customer + Addresses + Items
+DB --> OrderRepo : Order?
+alt order missing
+  Service --> Controller : ApiResponse 404
+else found
+  Service -> Service : MapOrderToDto(order)
+  Service --> Controller : OrderResponse
+end
+Controller --> Actor : JSON response
+
+== Get all orders ==
+Admin -> Controller : GET /api/Orders/GetAllOrders
+Controller -> Service : GetAllOrdersAsync()
+Service -> OrderRepo : GetAllWithDetailsAsync()
+OrderRepo -> DB : SELECT all Orders with details
+DB --> OrderRepo : orders
+Service -> Service : Map each order to OrderResponse
+Service --> Controller : List<OrderResponse>
+Controller --> Admin : JSON response
+
+== Get orders by customer ==
+Actor -> Controller : GET /api/Orders/GetOrdersByCustomer/{customerId}
+Controller -> Service : GetOrdersByCustomerAsync(customerId)
+Service -> CustomerRepo : GetActiveByIdAsync(customerId)
+CustomerRepo -> DB : SELECT active Customer
+alt customer missing
+  Service --> Controller : ApiResponse 404
+else customer exists
+  Service -> OrderRepo : GetByCustomerIdWithDetailsAsync(customerId)
+  OrderRepo -> DB : SELECT customer orders with details
+  DB --> OrderRepo : orders
+  Service -> Service : Map each order to OrderResponse
+  Service --> Controller : List<OrderResponse>
+end
+Controller --> Actor : JSON response
+
+== Update order status ==
+Admin -> Controller : PUT /api/Orders/UpdateOrderStatus
+Controller -> Service : UpdateOrderStatusAsync(request)
+Service -> OrderRepo : GetByIdAsync(orderId, trackChanges:true)
+OrderRepo -> DB : SELECT Order
+DB --> OrderRepo : Order?
+
+alt order missing
+  Service --> Controller : ApiResponse 404
+else same status
+  Service --> Controller : ApiResponse 200 already same status
+else transition not allowed
+  Service -> Service : Check AllowedStatusTransitions
+  Service --> Controller : ApiResponse 400
+else valid transition
+  Service -> Service : Set OrderStatus
+  Service -> Uow : SaveChangesAsync()
+  Uow -> DB : UPDATE Order
+  Service --> Controller : ConfirmationResponse
+end
+Controller --> Admin : JSON response
+
+@enduml

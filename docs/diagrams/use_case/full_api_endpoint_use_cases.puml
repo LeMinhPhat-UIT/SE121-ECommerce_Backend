@@ -1,0 +1,165 @@
+@startuml
+title ECommerce Backend - Complete API Endpoint Use Case Map
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor "Guest" as Guest
+actor "Customer\nJWT" as Customer
+actor "Admin\nJWT Role=Admin" as Admin
+actor "Operations" as Ops
+actor "Background Worker" as Worker
+
+Admin --|> Customer
+
+rectangle "CustomersController" {
+  usecase "POST /api/Customers/RegisterCustomer" as UC_C_Register
+  usecase "POST /api/Customers/Login" as UC_C_Login
+  usecase "GET /api/Customers/GetCustomerById/{id}" as UC_C_Get
+  usecase "PUT /api/Customers/UpdateCustomer" as UC_C_Update
+  usecase "DELETE /api/Customers/DeleteCustomer/{id}" as UC_C_Delete
+  usecase "POST /api/Customers/ChangePassword" as UC_C_Password
+}
+
+rectangle "AddressesController" {
+  usecase "POST /api/Addresses/CreateAddress" as UC_A_Create
+  usecase "GET /api/Addresses/GetAddressById/{id}" as UC_A_Get
+  usecase "PUT /api/Addresses/UpdateAddress" as UC_A_Update
+  usecase "DELETE /api/Addresses/DeleteAddress" as UC_A_Delete
+  usecase "GET /api/Addresses/GetAddressesByCustomer/{customerId}" as UC_A_List
+}
+
+rectangle "CategoriesController" {
+  usecase "POST /api/Categories/CreateCategory" as UC_K_Create
+  usecase "GET /api/Categories/GetCategoryById/{id}" as UC_K_Get
+  usecase "PUT /api/Categories/UpdateCategory" as UC_K_Update
+  usecase "DELETE /api/Categories/DeleteCategory/{id}" as UC_K_Delete
+  usecase "GET /api/Categories/GetAllCategories" as UC_K_List
+}
+
+rectangle "ProductsController" {
+  usecase "POST /api/Products/CreateProduct" as UC_P_Create
+  usecase "GET /api/Products/GetProductById/{id}" as UC_P_Get
+  usecase "PUT /api/Products/UpdateProduct" as UC_P_Update
+  usecase "DELETE /api/Products/DeleteProduct/{id}" as UC_P_Delete
+  usecase "GET /api/Products/GetAllProducts" as UC_P_List
+  usecase "GET /api/Products/GetAllProductsByCategory/{categoryId}" as UC_P_ByCategory
+  usecase "PUT /api/Products/UpdateProductStatus" as UC_P_Status
+}
+
+rectangle "CartsController" {
+  usecase "GET /api/Carts/GetCart/{customerId}" as UC_T_Get
+  usecase "POST /api/Carts/AddToCart" as UC_T_Add
+  usecase "PUT /api/Carts/UpdateCartItem" as UC_T_Update
+  usecase "DELETE /api/Carts/RemoveCartItem" as UC_T_Remove
+  usecase "DELETE /api/Carts/ClearCart" as UC_T_Clear
+}
+
+rectangle "OrdersController" {
+  usecase "POST /api/Orders/CreateOrder" as UC_O_Create
+  usecase "GET /api/Orders/GetOrderById/{id}" as UC_O_Get
+  usecase "PUT /api/Orders/UpdateOrderStatus" as UC_O_Status
+  usecase "GET /api/Orders/GetAllOrders" as UC_O_List
+  usecase "GET /api/Orders/GetOrdersByCustomer/{customerId}" as UC_O_ByCustomer
+}
+
+rectangle "PaymentsController" {
+  usecase "POST /api/Payments/ProcessPayment" as UC_M_Process
+  usecase "GET /api/Payments/GetPaymentById/{paymentId}" as UC_M_Get
+  usecase "GET /api/Payments/GetPaymentByOrderId/{orderId}" as UC_M_ByOrder
+  usecase "PUT /api/Payments/UpdatePaymentStatus" as UC_M_Status
+  usecase "POST /api/Payments/CompleteCODPayment" as UC_M_COD
+}
+
+rectangle "CancellationsController" {
+  usecase "POST /api/Cancellations/RequestCancellation" as UC_X_Request
+  usecase "GET /api/Cancellations/GetAllCancellations" as UC_X_List
+  usecase "GET /api/Cancellations/GetCancellationById/{id}" as UC_X_Get
+  usecase "PUT /api/Cancellations/UpdateCancellationStatus" as UC_X_Status
+}
+
+rectangle "RefundsController" {
+  usecase "GET /api/Refunds/GetEligibleRefunds" as UC_R_Eligible
+  usecase "POST /api/Refunds/ProcessRefund" as UC_R_Process
+  usecase "PUT /api/Refunds/UpdateRefundStatus" as UC_R_Status
+  usecase "GET /api/Refunds/GetRefundById/{id}" as UC_R_Get
+  usecase "GET /api/Refunds/GetAllRefunds" as UC_R_List
+}
+
+rectangle "FeedbackController" {
+  usecase "POST /api/Feedback/SubmitFeedback" as UC_F_Submit
+  usecase "GET /api/Feedback/GetFeedbackForProduct/{productId}" as UC_F_ByProduct
+  usecase "GET /api/Feedback/GetAllFeedback" as UC_F_List
+  usecase "PUT /api/Feedback/UpdateFeedback" as UC_F_Update
+  usecase "DELETE /api/Feedback/DeleteFeedback" as UC_F_Delete
+}
+
+Guest --> UC_C_Register
+Guest --> UC_C_Login
+Guest --> UC_K_Get
+Guest --> UC_K_List
+Guest --> UC_P_Get
+Guest --> UC_P_List
+Guest --> UC_P_ByCategory
+Guest --> UC_F_ByProduct
+
+Customer --> UC_C_Get
+Customer --> UC_C_Update
+Customer --> UC_C_Delete
+Customer --> UC_C_Password
+Customer --> UC_A_Create
+Customer --> UC_A_Get
+Customer --> UC_A_Update
+Customer --> UC_A_Delete
+Customer --> UC_A_List
+Customer --> UC_T_Get
+Customer --> UC_T_Add
+Customer --> UC_T_Update
+Customer --> UC_T_Remove
+Customer --> UC_T_Clear
+Customer --> UC_O_Create
+Customer --> UC_O_Get
+Customer --> UC_O_ByCustomer
+Customer --> UC_M_Process
+Customer --> UC_M_Get
+Customer --> UC_M_ByOrder
+Customer --> UC_M_COD
+Customer --> UC_X_Request
+Customer --> UC_X_Get
+Customer --> UC_F_Submit
+Customer --> UC_F_Update
+Customer --> UC_F_Delete
+
+Admin --> UC_K_Create
+Admin --> UC_K_Update
+Admin --> UC_K_Delete
+Admin --> UC_P_Create
+Admin --> UC_P_Update
+Admin --> UC_P_Delete
+Admin --> UC_P_Status
+Admin --> UC_O_Status
+Admin --> UC_O_List
+Admin --> UC_M_Status
+Admin --> UC_X_List
+Admin --> UC_X_Status
+Admin --> UC_R_Eligible
+Admin --> UC_R_Process
+Admin --> UC_R_Status
+Admin --> UC_R_Get
+Admin --> UC_R_List
+Admin --> UC_F_List
+
+Worker --> UC_M_Status : pending payment scan
+Worker --> UC_R_Status : refund retry scan
+Ops --> UC_O_List : operational support
+Ops --> UC_X_List
+Ops --> UC_R_List
+Ops --> UC_F_List
+
+note bottom
+  This diagram mirrors every current controller route in ECommerceApp/Controllers.
+  Some controller methods have no Authorize attribute in code; actor assignment here follows intended domain use.
+end note
+
+@enduml

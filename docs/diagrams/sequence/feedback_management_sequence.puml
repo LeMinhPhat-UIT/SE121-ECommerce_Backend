@@ -1,0 +1,95 @@
+@startuml
+title ECommerce Backend - Feedback Management Sequence
+
+skinparam shadowing false
+
+actor "Customer" as Customer
+actor "Guest / Customer" as Reader
+actor "Admin" as Admin
+participant "FeedbackController" as Controller
+participant "FeedbackService" as Service
+participant "UnitOfWork" as Uow
+participant "CustomerRepository" as CustomerRepo
+participant "ProductRepository" as ProductRepo
+participant "OrderRepository" as OrderRepo
+participant "FeedbackRepository" as FeedbackRepo
+database "SQL Server" as DB
+
+== Submit feedback ==
+Customer -> Controller : POST /api/Feedback/SubmitFeedback
+Controller -> Service : SubmitFeedbackAsync(request)
+Service -> CustomerRepo : GetActiveByIdAsync(customerId)
+CustomerRepo -> DB : SELECT active Customer
+Service -> ProductRepo : GetByIdAsync(productId)
+ProductRepo -> DB : SELECT Product
+Service -> OrderRepo : HasCustomerPurchasedAndReceivedProductAsync(customerId, productId)
+OrderRepo -> DB : SELECT delivered order item exists
+Service -> FeedbackRepo : ExistsByCustomerAndProductAsync(customerId, productId)
+FeedbackRepo -> DB : SELECT existing Feedback
+
+alt customer/product missing or no delivered purchase or duplicate
+  Service --> Controller : ApiResponse 404/400
+  Controller --> Customer : validation error
+else valid feedback
+  Service -> FeedbackRepo : Add(Feedback)
+  Service -> Uow : SaveChangesAsync()
+  Uow -> DB : INSERT Feedback
+  Service -> Service : Build FeedbackResponse manually
+  Service --> Controller : FeedbackResponse
+  Controller --> Customer : JSON response
+end
+
+== Read feedback ==
+Reader -> Controller : GET /api/Feedback/GetFeedbackForProduct/{productId}
+Controller -> Service : GetFeedbackForProductAsync(productId)
+Service -> ProductRepo : GetByIdAsync(productId)
+ProductRepo -> DB : SELECT Product
+alt product missing
+  Service --> Controller : ApiResponse 404
+else product exists
+  Service -> FeedbackRepo : GetByProductIdWithCustomerAsync(productId)
+  FeedbackRepo -> DB : SELECT Feedback + Customer
+  DB --> FeedbackRepo : feedbacks
+  Service -> Service : calculate AverageRating and customer feedback list
+  Service --> Controller : ProductFeedbackResponse
+end
+Controller --> Reader : JSON response
+
+== Admin read all feedback ==
+Admin -> Controller : GET /api/Feedback/GetAllFeedback
+Controller -> Service : GetAllFeedbackAsync()
+Service -> FeedbackRepo : GetAllWithDetailsAsync()
+FeedbackRepo -> DB : SELECT Feedback + Product + Customer
+Service --> Controller : List<FeedbackResponse>
+Controller --> Admin : JSON response
+
+== Update or delete own feedback ==
+Customer -> Controller : PUT/DELETE feedback
+alt UpdateFeedback
+  Controller -> Service : UpdateFeedbackAsync(request)
+  Service -> FeedbackRepo : GetByIdAndCustomerIdWithDetailsAsync(feedbackId, customerId, true)
+  FeedbackRepo -> DB : SELECT Feedback + details
+  alt not found or not owner
+    Service --> Controller : ApiResponse 404
+  else found
+    Service -> Service : update rating/comment/UpdatedAt
+    Service -> Uow : SaveChangesAsync()
+    Uow -> DB : UPDATE Feedback
+    Service --> Controller : FeedbackResponse
+  end
+else DeleteFeedback
+  Controller -> Service : DeleteFeedbackAsync(request)
+  Service -> FeedbackRepo : GetByIdAsync(feedbackId, true)
+  FeedbackRepo -> DB : SELECT Feedback
+  alt feedback missing or customer mismatch
+    Service --> Controller : ApiResponse 404/401
+  else owner
+    Service -> FeedbackRepo : Remove(feedback)
+    Service -> Uow : SaveChangesAsync()
+    Uow -> DB : DELETE Feedback
+    Service --> Controller : ConfirmationResponse
+  end
+end
+Controller --> Customer : JSON response
+
+@enduml

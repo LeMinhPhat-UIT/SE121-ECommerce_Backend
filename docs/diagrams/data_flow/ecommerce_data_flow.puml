@@ -1,0 +1,62 @@
+@startuml
+title ECommerce Backend - Data Flow Diagram
+
+left to right direction
+skinparam shadowing false
+
+actor "Guest" as Guest
+actor "Customer" as Customer
+actor "Admin" as Admin
+actor "Operations" as Ops
+
+rectangle "ASP.NET Core API\nControllers + Middleware" as API
+rectangle "JWT Auth\nClaims + Role Checks" as Auth
+rectangle "Application Services\nBusiness Rules" as Services
+rectangle "Repositories + UnitOfWork" as Repos
+database "SQL Server\nTransactional Store" as SQL
+database "Redis / Memory Cache\nCatalog Cache" as Cache
+cloud "SMTP Server\nEmail Delivery" as SMTP
+cloud "Payment Gateway Simulator" as Gateway
+rectangle "Background Workers\nPending Payments + Refund Retries" as Workers
+database "Elasticsearch\nStructured Logs" as ES
+rectangle "Kibana\nLog Search" as Kibana
+
+Guest --> API : register, login,\nbrowse catalog, read feedback
+Customer --> API : cart, address,\norder, payment,\ncancellation, feedback
+Admin --> API : catalog management,\norder status,\ncancellation review,\nrefund processing
+API --> Auth : validate JWT where required
+Auth --> API : customer_id + role claims
+API --> Services : DTO requests
+
+Services --> Cache : read product/category by versioned key
+Cache --> Services : cache hit
+Services --> Repos : cache miss or transactional command
+Repos --> SQL : EF Core query/save
+SQL --> Repos : entities
+Repos --> Services : entities/results
+Services --> API : ApiResponse DTOs
+API --> Guest : JSON responses
+API --> Customer : JSON responses
+API --> Admin : JSON responses
+
+Services --> Cache : refresh catalog version on category/product mutation
+Services --> Gateway : simulate non-COD payment and refund
+Services --> SMTP : send order, cancellation,\nand refund notifications
+Workers --> SQL : scan pending payments/refunds every 5 minutes
+Workers --> Gateway : retry simulated settlement
+Workers --> SMTP : send success notifications
+
+API --> ES : request/action/error logs via Serilog
+Services --> ES : service logs via Serilog
+Workers --> ES : background job logs via Serilog
+Ops --> Kibana : inspect logs
+Kibana --> ES : query indices
+
+note bottom of SQL
+  Core persisted data:
+  customers, addresses, categories, products,
+  carts, orders, payments, cancellations,
+  refunds, feedback, status seed values.
+end note
+
+@enduml

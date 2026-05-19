@@ -1,0 +1,53 @@
+@startuml
+title ECommerce Backend - Checkout Order Activity Diagram
+
+skinparam shadowing false
+
+start
+:Receive POST /api/Orders/CreateOrder;
+:Begin EF Core transaction;
+:Load active customer;
+if (Customer exists?) then (yes)
+  :Load billing and shipping addresses;
+  if (Addresses belong to customer?) then (yes)
+    :Load requested products;
+    :Initialize totals and order items;
+
+    repeat
+      :Validate product exists;
+      if (Enough stock?) then (yes)
+        :Deduct stock atomically;
+        if (Deduct succeeded?) then (yes)
+          :Calculate base price, discount, total;
+          :Add OrderItem draft;
+        else (no)
+          :Rollback transaction;
+          :Return 409 stock conflict;
+          stop
+        endif
+      else (no)
+        :Rollback transaction;
+        :Return 400 insufficient stock;
+        stop
+      endif
+    repeat while (More order items?) is (yes)
+
+    :Create Order with Pending status;
+    :Set shipping cost and total amount;
+    :Mark active cart as checked out if present;
+    :Save order, items, product stock, cart changes;
+    :Commit transaction;
+    :Return 200 OrderResponse;
+    stop
+  else (no)
+    :Rollback transaction;
+    :Return 400 invalid address;
+    stop
+  endif
+else (no)
+  :Rollback transaction;
+  :Return 404 customer not found;
+  stop
+endif
+
+@enduml

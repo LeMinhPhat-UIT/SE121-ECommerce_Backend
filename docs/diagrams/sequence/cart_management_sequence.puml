@@ -1,0 +1,103 @@
+@startuml
+title ECommerce Backend - Shopping Cart Management Sequence
+
+skinparam shadowing false
+
+actor "Customer / Admin" as Actor
+participant "CartsController" as Controller
+participant "ClaimsPrincipalExtensions" as Claims
+participant "ShoppingCartService" as Service
+participant "CartMapper" as Mapper
+participant "UnitOfWork" as Uow
+participant "CartRepository" as CartRepo
+participant "CartItemRepository" as ItemRepo
+participant "ProductRepository" as ProductRepo
+database "SQL Server" as DB
+
+Actor -> Controller : Send cart request with JWT
+Controller -> Claims : GetCustomerId(), IsAdmin()
+
+alt non-admin customer id mismatch
+  Controller --> Actor : 403 Forbidden
+else owner or admin
+  alt GetCart
+    Controller -> Service : GetCartByCustomerIdAsync(customerId)
+    Service -> CartRepo : GetActiveCartByCustomerIdAsync(customerId)
+    CartRepo -> DB : SELECT active Cart with items/products
+    DB --> CartRepo : Cart?
+    alt no active cart
+      Service -> Service : CreateEmptyCartResponse(customerId)
+    else cart exists
+      Service -> Mapper : Map(Cart)
+      Service -> Service : calculate totals and product names
+    end
+    Service --> Controller : CartResponse
+  else AddToCart
+    Controller -> Service : AddToCartAsync(request)
+    Service -> ProductRepo : GetByIdAsync(productId)
+    ProductRepo -> DB : SELECT Product
+    DB --> ProductRepo : Product?
+    alt product missing or quantity exceeds stock
+      Service --> Controller : ApiResponse 404/400
+    else valid product
+      Service -> CartRepo : GetActiveCartByCustomerIdAsync(customerId, true)
+      CartRepo -> DB : SELECT active Cart with items
+      alt cart missing
+        Service -> CartRepo : Add(new Cart)
+      else existing cart
+        Service -> Service : find matching CartItem
+      end
+      alt existing item
+        Service -> Service : increase quantity and recalculate total
+      else new item
+        Service -> Service : compute product discount and total
+        Service -> Service : add CartItem to cart
+      end
+      Service -> Uow : SaveChangesAsync()
+      Uow -> DB : INSERT/UPDATE Cart and CartItem
+      Service -> CartRepo : GetByIdWithItemsAsync(cart.Id)
+      Service -> Mapper : Map(updated cart)
+      Service --> Controller : CartResponse
+    end
+  else UpdateCartItem
+    Controller -> Service : UpdateCartItemAsync(request)
+    Service -> CartRepo : GetActiveCartByCustomerIdAsync(customerId, true)
+    CartRepo -> DB : SELECT Cart with items/products
+    alt cart or item missing
+      Service --> Controller : ApiResponse 404
+    else item found
+      Service -> Service : validate quantity <= product stock
+      Service -> Service : update quantity and total
+      Service -> Uow : SaveChangesAsync()
+      Uow -> DB : UPDATE CartItem
+      Service -> Mapper : Map(Cart)
+      Service --> Controller : CartResponse
+    end
+  else RemoveCartItem
+    Controller -> Service : RemoveCartItemAsync(request)
+    Service -> CartRepo : GetActiveCartByCustomerIdAsync(customerId, true)
+    CartRepo -> DB : SELECT Cart with items
+    alt cart or item missing
+      Service --> Controller : ApiResponse 404
+    else item found
+      Service -> ItemRepo : Remove(item)
+      Service -> Uow : SaveChangesAsync()
+      Uow -> DB : DELETE CartItem
+      Service --> Controller : CartResponse
+    end
+  else ClearCart
+    Controller -> Service : ClearCartAsync(customerId)
+    Service -> CartRepo : GetActiveCartByCustomerIdAsync(customerId, true)
+    alt cart missing
+      Service --> Controller : ApiResponse 404
+    else cart exists
+      Service -> ItemRepo : RemoveRange(cart.CartItems)
+      Service -> Uow : SaveChangesAsync()
+      Uow -> DB : DELETE CartItems
+      Service --> Controller : ConfirmationResponse
+    end
+  end
+  Controller --> Actor : JSON response
+end
+
+@enduml

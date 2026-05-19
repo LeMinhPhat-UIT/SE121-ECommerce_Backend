@@ -1,0 +1,53 @@
+@startuml
+title ECommerce Backend - Category and Product Management Activity Diagram
+
+skinparam shadowing false
+
+start
+:Receive catalog endpoint request;
+if (Read all or read by category?) then (yes)
+  :Normalize pagination;
+  :Query active categories or available products;
+  :Map entities to response DTOs;
+  :Return paged result;
+  stop
+elseif (Read by id?) then (yes)
+  if (Cache enabled?) then (yes)
+    :Read cache version and versioned key;
+    if (Cache hit?) then (yes)
+      :Return cached DTO;
+      stop
+    endif
+  endif
+  :Load category/product from database;
+  if (Found?) then (yes)
+    :Map to response DTO;
+    :Store DTO in cache when enabled;
+    :Return response;
+  else (no)
+    :Return 404;
+  endif
+  stop
+else (Mutation)
+  :Require Admin role;
+  if (Authorized?) then (yes)
+    if (Category mutation?) then (yes)
+      :Validate category name uniqueness or id existence;
+      :Create/update category or set IsActive=false;
+      :Save changes;
+      :Refresh category cache version;
+    else (Product mutation)
+      :Validate product name uniqueness;
+      :Validate category exists where required;
+      :Create/update product or set availability;
+      :Save changes;
+      :Refresh product cache version;
+    endif
+    :Return response or confirmation;
+  else (no)
+    :Return 401/403;
+  endif
+endif
+stop
+
+@enduml

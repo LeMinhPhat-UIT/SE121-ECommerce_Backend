@@ -1,0 +1,91 @@
+@startuml
+title ECommerce Backend - Use Case Diagram
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor "Guest" as Guest
+actor "Customer" as Customer
+actor "Admin" as Admin
+actor "Operations" as Ops
+actor "SMTP Server" as SMTP
+actor "Payment Gateway Simulator" as Gateway
+
+Admin --|> Customer
+
+rectangle "ECommerce Backend API" {
+  usecase "Register account" as UC_Register
+  usecase "Login and receive JWT" as UC_Login
+  usecase "Browse catalog" as UC_Browse
+  usecase "View product feedback" as UC_ViewFeedback
+
+  usecase "Manage own profile" as UC_Profile
+  usecase "Change password" as UC_Password
+  usecase "Manage addresses" as UC_Address
+  usecase "Manage cart" as UC_Cart
+  usecase "Place order" as UC_Order
+  usecase "Pay order" as UC_Pay
+  usecase "View own orders" as UC_ViewOrders
+  usecase "Request cancellation" as UC_CancelRequest
+  usecase "Submit product feedback" as UC_SubmitFeedback
+
+  usecase "Manage customers" as UC_Customers
+  usecase "Manage categories" as UC_Categories
+  usecase "Manage products" as UC_Products
+  usecase "Update order status" as UC_OrderStatus
+  usecase "Review cancellations" as UC_CancelReview
+  usecase "Process refunds" as UC_Refund
+  usecase "Review all feedback" as UC_AllFeedback
+  usecase "Monitor logs" as UC_Logs
+
+  usecase "Send order/cancellation/refund email" as UC_Email
+  usecase "Simulate online payment/refund" as UC_Gateway
+}
+
+Guest --> UC_Register
+Guest --> UC_Login
+Guest --> UC_Browse
+Guest --> UC_ViewFeedback
+
+Customer --> UC_Profile
+Customer --> UC_Password
+Customer --> UC_Address
+Customer --> UC_Cart
+Customer --> UC_Order
+Customer --> UC_Pay
+Customer --> UC_ViewOrders
+Customer --> UC_CancelRequest
+Customer --> UC_SubmitFeedback
+
+Admin --> UC_Customers
+Admin --> UC_Categories
+Admin --> UC_Products
+Admin --> UC_OrderStatus
+Admin --> UC_CancelReview
+Admin --> UC_Refund
+Admin --> UC_AllFeedback
+Admin --> UC_Logs
+
+Ops --> UC_Logs
+
+UC_Order .> UC_Address : <<include>>
+UC_Order .> UC_Cart : <<include>>
+UC_Order .> UC_Pay : <<extend>>
+UC_Pay .> UC_Gateway : <<include for non-COD>>
+UC_Pay .> UC_Email : <<include on confirmation>>
+UC_CancelReview .> UC_Email : <<include>>
+UC_Refund .> UC_Gateway : <<include>>
+UC_Refund .> UC_Email : <<include on success>>
+UC_SubmitFeedback .> UC_ViewOrders : <<requires delivered purchase>>
+
+SMTP <-- UC_Email
+Gateway <-- UC_Gateway
+
+note right of UC_Login
+  JWT roles are derived from configured admin email list.
+  Non-admin users can only access their own customer,
+  address, and cart resources where controllers enforce it.
+end note
+
+@enduml

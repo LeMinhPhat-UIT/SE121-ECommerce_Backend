@@ -1,0 +1,64 @@
+@startuml
+title ECommerce Backend - Component Diagram
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+actor "API Client\n(Web/Mobile/Postman)" as Client
+
+package "ECommerceApp ASP.NET Core API" {
+  component "HTTP Pipeline\nControllers + Filters" as Controllers
+  component "JWT Authentication\nRole Authorization" as Auth
+  component "Logging Middleware\nError Handling Middleware" as Middleware
+  component "Domain Services" as Services
+  component "Mapperly Mappers" as Mappers
+  component "UnitOfWork" as UnitOfWork
+  component "Repository Layer" as Repositories
+  component "ApplicationDbContext\nEF Core" as DbContext
+  component "Catalog Cache Adapter\nIDistributedCache" as CacheAdapter
+  component "PendingPaymentService\nBackgroundService" as PendingWorker
+  component "RefundProcessingBackgroundService\nBackgroundService" as RefundWorker
+  component "Serilog" as Serilog
+}
+
+database "SQL Server" as SqlServer
+database "Redis\nor in-memory fallback" as Redis
+database "Elasticsearch" as Elastic
+component "Kibana" as Kibana
+cloud "SMTP Server" as Smtp
+cloud "Payment Gateway Simulator" as Gateway
+
+Client --> Middleware : HTTPS JSON requests
+Middleware --> Auth : validate JWT
+Auth --> Controllers : authenticated principal
+Controllers --> Services : invoke use cases
+Services --> Mappers : map DTOs/entities
+Services --> UnitOfWork : transactions + SaveChanges
+UnitOfWork --> Repositories
+Repositories --> DbContext
+DbContext --> SqlServer : EF Core queries/commands
+
+Services --> CacheAdapter : product/category read cache
+CacheAdapter --> Redis : versioned cache keys
+Services --> Smtp : order/cancellation/refund emails
+Services --> Gateway : simulated payment/refund result
+
+PendingWorker --> DbContext : scan pending payments every 5 min
+PendingWorker --> Services : send confirmation email
+RefundWorker --> DbContext : scan pending/failed refunds every 5 min
+RefundWorker --> Services : process retry + send email
+
+Middleware --> Serilog
+Controllers --> Serilog
+Services --> Serilog
+PendingWorker --> Serilog
+RefundWorker --> Serilog
+Serilog --> Elastic : structured logs
+Kibana --> Elastic : search and dashboards
+
+note right of CacheAdapter
+  ProductService and CategoryService read from cache by version.
+  Mutations refresh the version to invalidate old catalog keys.
+end note
+
+@enduml

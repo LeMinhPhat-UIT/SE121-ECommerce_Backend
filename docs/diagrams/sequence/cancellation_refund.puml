@@ -1,0 +1,106 @@
+@startuml
+title ECommerce Backend - Cancellation and Refund Sequence
+
+skinparam shadowing false
+
+actor "Customer" as Customer
+actor "Admin" as Admin
+participant "CancellationsController" as Cancellations
+participant "CancellationService" as CancellationService
+participant "RefundsController" as Refunds
+participant "RefundService" as RefundService
+participant "UnitOfWork + Repositories" as Uow
+database "SQL Server" as DB
+participant "Payment Gateway Simulator" as Gateway
+participant "EmailService" as Email
+participant "SMTP Server" as SMTP
+
+== Customer requests cancellation ==
+Customer -> Cancellations : POST /api/Cancellations/RequestCancellation
+Cancellations -> CancellationService : RequestCancellationAsync(request)
+CancellationService -> Uow : Get order by orderId + customerId
+Uow -> DB : SELECT Order
+DB --> Uow : order / null
+
+alt order missing, not Processing, or duplicate request
+  CancellationService --> Cancellations : ApiResponse 404/400
+  Cancellations --> Customer : rejection response
+else order is eligible
+  CancellationService -> Uow : Add Cancellation(Pending)
+  CancellationService -> Uow : SaveChangesAsync()
+  Uow -> DB : INSERT Cancellation
+  CancellationService --> Cancellations : ApiResponse 200 CancellationResponse
+  Cancellations --> Customer : cancellation request created
+end
+
+== Admin reviews cancellation ==
+Admin -> Cancellations : PUT /api/Cancellations/UpdateCancellationStatus
+Cancellations -> CancellationService : UpdateCancellationStatusAsync(statusUpdate)
+CancellationService -> Uow : BeginTransactionAsync()
+CancellationService -> Uow : Get cancellation with order/items/products
+Uow -> DB : SELECT Cancellation + Order + OrderItems + Products
+DB --> Uow : full cancellation graph
+
+alt cancellation not pending
+  CancellationService --> Cancellations : ApiResponse 400
+  Cancellations --> Admin : cannot update
+else approved
+  CancellationService -> Uow : set Cancellation.Approved
+  CancellationService -> Uow : set Order.Canceled
+  CancellationService -> Uow : restore product stock
+  CancellationService -> Uow : SaveChangesAsync()
+  Uow -> DB : UPDATE Cancellation, Order, Products
+  CancellationService -> Uow : CommitTransactionAsync()
+  CancellationService -> Email : NotifyCancellationAcceptedAsync()
+  Email -> SMTP : send accepted email
+  CancellationService --> Cancellations : ApiResponse 200
+  Cancellations --> Admin : approved
+else rejected
+  CancellationService -> Uow : set Cancellation.Rejected with remarks
+  CancellationService -> Uow : SaveChangesAsync()
+  Uow -> DB : UPDATE Cancellation
+  CancellationService -> Uow : CommitTransactionAsync()
+  CancellationService -> Email : NotifyCancellationRejectionAsync()
+  Email -> SMTP : send rejected email
+  CancellationService --> Cancellations : ApiResponse 200
+  Cancellations --> Admin : rejected
+end
+
+== Refund approved cancellation ==
+Admin -> Refunds : GET /api/Refunds/GetEligibleRefunds
+Refunds -> RefundService : GetEligibleRefundsAsync()
+RefundService -> Uow : GetApprovedCancellationsPendingRefundAsync()
+Uow -> DB : SELECT approved cancellations without refund
+DB --> Uow : pending refund list
+RefundService --> Refunds : ApiResponse 200
+Refunds --> Admin : eligible refunds
+
+Admin -> Refunds : POST /api/Refunds/ProcessRefund
+Refunds -> RefundService : ProcessRefundAsync(refundRequest)
+RefundService -> Uow : Load cancellation, order, payment
+Uow -> DB : SELECT full cancellation details
+DB --> Uow : cancellation graph
+
+alt not approved, duplicate refund, COD, or invalid amount
+  RefundService --> Refunds : ApiResponse 400/404
+  Refunds --> Admin : error response
+else refund is valid
+  RefundService -> Uow : Add Refund(Pending)
+  RefundService -> Uow : SaveChangesAsync()
+  Uow -> DB : INSERT Refund
+  RefundService -> Gateway : ProcessRefundPaymentAsync(refund)
+  Gateway --> RefundService : success / failed / pending
+  alt success
+    RefundService -> Uow : set Refund.Completed, Payment.Refunded
+    RefundService -> Email : send refund success email
+    Email -> SMTP : deliver refund email
+  else failed or pending
+    RefundService -> Uow : set Refund.Failed or Refund.Pending
+  end
+  RefundService -> Uow : SaveChangesAsync()
+  Uow -> DB : UPDATE Refund and Payment
+  RefundService --> Refunds : ApiResponse 200 RefundResponse
+  Refunds --> Admin : refund status
+end
+
+@enduml

@@ -1,0 +1,209 @@
+@startuml
+title ECommerce Backend - Domain Class Diagram
+
+hide circle
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+class Customer {
+  +Id : int
+  +FirstName : string
+  +LastName : string
+  +Email : string
+  +PhoneNumber : string
+  +DateOfBirth : DateTime
+  +Password : string
+  +IsActive : bool
+}
+
+class Address {
+  +Id : int
+  +CustomerId : int
+  +AddressLine1 : string
+  +AddressLine2 : string
+  +City : string
+  +State : string
+  +PostalCode : string
+  +Country : string
+}
+
+class Category {
+  +Id : int
+  +Name : string
+  +Description : string
+  +IsActive : bool
+}
+
+class Product {
+  +Id : int
+  +Name : string
+  +Description : string
+  +Price : decimal
+  +StockQuantity : int
+  +ImageUrl : string
+  +DiscountPercentage : int
+  +IsAvailable : bool
+  +CategoryId : int
+}
+
+class Cart {
+  +Id : int
+  +CustomerId : int
+  +IsCheckedOut : bool
+  +CreatedAt : DateTime
+  +UpdatedAt : DateTime
+}
+
+class CartItem {
+  +Id : int
+  +CartId : int
+  +ProductId : int
+  +Quantity : int
+  +UnitPrice : decimal
+  +Discount : decimal
+  +TotalPrice : decimal
+  +CreatedAt : DateTime
+  +UpdatedAt : DateTime
+}
+
+class Order {
+  +Id : int
+  +OrderNumber : string
+  +OrderDate : DateTime
+  +CustomerId : int
+  +BillingAddressId : int
+  +ShippingAddressId : int
+  +TotalBaseAmount : decimal
+  +TotalDiscountAmount : decimal
+  +ShippingCost : decimal
+  +TotalAmount : decimal
+  +OrderStatus : OrderStatus
+}
+
+class OrderItem {
+  +Id : int
+  +OrderId : int
+  +ProductId : int
+  +Quantity : int
+  +UnitPrice : decimal
+  +Discount : decimal
+  +TotalPrice : decimal
+}
+
+class Payment {
+  +Id : int
+  +OrderId : int
+  +PaymentMethod : string
+  +TransactionId : string?
+  +Amount : decimal
+  +PaymentDate : DateTime
+  +Status : PaymentStatus
+}
+
+class Cancellation {
+  +Id : int
+  +OrderId : int
+  +Reason : string
+  +Status : CancellationStatus
+  +RequestedAt : DateTime
+  +ProcessedAt : DateTime?
+  +ProcessedBy : int?
+  +OrderAmount : decimal
+  +CancellationCharges : decimal?
+  +Remarks : string?
+}
+
+class Refund {
+  +Id : int
+  +CancellationId : int
+  +PaymentId : int
+  +Amount : decimal
+  +Status : RefundStatus
+  +RefundMethod : string
+  +RefundReason : string?
+  +TransactionId : string?
+  +InitiatedAt : DateTime
+  +CompletedAt : DateTime?
+  +ProcessedBy : int?
+}
+
+class Feedback {
+  +Id : int
+  +CustomerId : int
+  +ProductId : int
+  +Rating : int
+  +Comment : string?
+  +CreatedAt : DateTime
+  +UpdatedAt : DateTime
+}
+
+class Status {
+  +Id : int
+  +Name : string
+}
+
+enum OrderStatus {
+  Pending
+  Processing
+  Shipped
+  Delivered
+  Canceled
+}
+
+enum PaymentStatus {
+  Pending
+  Completed
+  Failed
+  Refunded
+}
+
+enum CancellationStatus {
+  Pending
+  Approved
+  Rejected
+}
+
+enum RefundStatus {
+  Pending
+  Completed
+  Failed
+}
+
+enum RefundMethod {
+  Original
+  PayPal
+  Stripe
+  BankTransfer
+  Manual
+}
+
+Customer "1" -- "0..*" Address : owns
+Customer "1" -- "0..*" Cart : has
+Cart "1" -- "0..*" CartItem : contains
+Product "1" -- "0..*" CartItem : selected product
+
+Category "1" -- "0..*" Product : groups
+Customer "1" -- "0..*" Order : places
+Address "1" <-- "0..*" Order : billing address
+Address "1" <-- "0..*" Order : shipping address
+Order "1" -- "1..*" OrderItem : contains
+Product "1" -- "0..*" OrderItem : ordered product
+Order "1" -- "0..1" Payment : paid by
+Order "1" -- "0..1" Cancellation : may have
+Payment "1" -- "0..1" Refund : may produce
+Cancellation "1" -- "0..1" Refund : may produce
+Customer "1" -- "0..*" Feedback : writes
+Product "1" -- "0..*" Feedback : receives
+
+Order ..> OrderStatus
+Payment ..> PaymentStatus
+Cancellation ..> CancellationStatus
+Refund ..> RefundStatus
+Refund ..> RefundMethod
+
+note right of Status
+  Seeded lookup values mirror the enum status IDs.
+  Current entities store enum values directly.
+end note
+
+@enduml

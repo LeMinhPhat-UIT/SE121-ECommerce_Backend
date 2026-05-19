@@ -1,0 +1,60 @@
+@startuml
+title ECommerce Backend - Address Management Activity Diagram
+
+skinparam shadowing false
+
+start
+:Receive address endpoint request;
+:Validate JWT;
+:Read current customer id and admin role;
+if (Admin or request customer id matches JWT?) then (yes)
+  if (CreateAddress?) then (yes)
+    :Verify customer exists;
+    if (Customer found?) then (yes)
+      :Map AddressCreateRequest to Address;
+      :Save address;
+      :Return AddressResponse;
+    else (no)
+      :Return 404 customer not found;
+    endif
+  elseif (GetAddressById?) then (yes)
+    :Load address by id;
+    if (Address exists?) then (yes)
+      if (Admin or owner?) then (yes)
+        :Return AddressResponse;
+      else (no)
+        :Return 403;
+      endif
+    else (no)
+      :Return 404 address not found;
+    endif
+  elseif (UpdateAddress?) then (yes)
+    :Load address by id and customer id;
+    if (Address exists?) then (yes)
+      :Update address fields;
+      :Save changes;
+      :Return confirmation;
+    else (no)
+      :Return 404;
+    endif
+  elseif (DeleteAddress?) then (yes)
+    :Load address by id and customer id;
+    if (Address exists?) then (yes)
+      :Remove address;
+      :Save changes;
+      :Return confirmation;
+    else (no)
+      :Return 404;
+    endif
+  else (List addresses)
+    :Verify customer exists;
+    :Normalize pagination;
+    :Query paged customer addresses;
+    :Return PagedResult<AddressResponse>;
+  endif
+else (no)
+  :Return 403 Forbidden;
+endif
+stop
+
+@enduml

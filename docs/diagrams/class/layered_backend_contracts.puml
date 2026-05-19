@@ -1,0 +1,184 @@
+@startuml
+title ECommerce Backend - Layered Contracts Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+package "Controllers" {
+  class CustomersController
+  class AddressesController
+  class CategoriesController
+  class ProductsController
+  class CartsController
+  class OrdersController
+  class PaymentsController
+  class CancellationsController
+  class RefundsController
+  class FeedbackController
+}
+
+package "Service Interfaces" {
+  interface ICustomerService
+  interface IAddressService
+  interface ICategoryService
+  interface IProductService
+  interface IShoppingCartService
+  interface IOrderService
+  interface IPaymentService
+  interface ICancellationService
+  interface IRefundService
+  interface IFeedbackService
+  interface IEmailService
+}
+
+package "Service Implementations" {
+  class CustomerService
+  class AddressService
+  class CategoryService
+  class ProductService
+  class ShoppingCartService
+  class OrderService
+  class PaymentService
+  class CancellationService
+  class RefundService
+  class FeedbackService
+  class EmailService
+  class PendingPaymentService
+  class RefundProcessingBackgroundService
+}
+
+package "Repository Contracts" {
+  interface IUnitOfWork
+  interface ICustomerRepository
+  interface IAddressRepository
+  interface ICategoryRepository
+  interface IProductRepository
+  interface ICartRepository
+  interface ICartItemRepository
+  interface IOrderRepository
+  interface IPaymentRepository
+  interface ICancellationRepository
+  interface IRefundRepository
+  interface IFeedbackRepository
+}
+
+package "Repositories and Persistence" {
+  class UnitOfWork
+  class CustomerRepository
+  class AddressRepository
+  class CategoryRepository
+  class ProductRepository
+  class CartRepository
+  class CartItemRepository
+  class OrderRepository
+  class PaymentRepository
+  class CancellationRepository
+  class RefundRepository
+  class FeedbackRepository
+  class ApplicationDbContext
+}
+
+package "Mapping and Infrastructure" {
+  interface ICustomerMapper
+  interface IAddressMapper
+  interface ICategoryMapper
+  interface IProductMapper
+  interface ICartMapper
+  interface IDistributedCache
+  class CatalogCacheKeys
+  class CacheOptions
+  class ClaimsPrincipalExtensions
+  class ErrorHandlingMiddleware
+  class LoggingMiddleware
+}
+
+CustomersController ..> ICustomerService
+AddressesController ..> IAddressService
+CategoriesController ..> ICategoryService
+ProductsController ..> IProductService
+CartsController ..> IShoppingCartService
+OrdersController ..> OrderService
+PaymentsController ..> PaymentService
+CancellationsController ..> CancellationService
+RefundsController ..> RefundService
+FeedbackController ..> FeedbackService
+
+ICustomerService <|.. CustomerService
+IAddressService <|.. AddressService
+ICategoryService <|.. CategoryService
+IProductService <|.. ProductService
+IShoppingCartService <|.. ShoppingCartService
+IOrderService <|.. OrderService
+IPaymentService <|.. PaymentService
+ICancellationService <|.. CancellationService
+IRefundService <|.. RefundService
+IFeedbackService <|.. FeedbackService
+IEmailService <|.. EmailService
+
+CustomerService ..> IUnitOfWork
+AddressService ..> IUnitOfWork
+CategoryService ..> IUnitOfWork
+ProductService ..> IUnitOfWork
+ShoppingCartService ..> IUnitOfWork
+OrderService ..> IUnitOfWork
+PaymentService ..> IUnitOfWork
+CancellationService ..> IUnitOfWork
+RefundService ..> IUnitOfWork
+FeedbackService ..> IUnitOfWork
+
+CustomerService ..> ICustomerMapper
+AddressService ..> IAddressMapper
+CategoryService ..> ICategoryMapper
+ProductService ..> IProductMapper
+ShoppingCartService ..> ICartMapper
+CategoryService ..> IDistributedCache
+ProductService ..> IDistributedCache
+CategoryService ..> CatalogCacheKeys
+ProductService ..> CatalogCacheKeys
+PaymentService ..> EmailService
+CancellationService ..> EmailService
+RefundService ..> EmailService
+
+PendingPaymentService ..> ApplicationDbContext
+PendingPaymentService ..> PaymentService
+RefundProcessingBackgroundService ..> ApplicationDbContext
+RefundProcessingBackgroundService ..> RefundService
+RefundProcessingBackgroundService ..> EmailService
+
+IUnitOfWork <|.. UnitOfWork
+ICustomerRepository <|.. CustomerRepository
+IAddressRepository <|.. AddressRepository
+ICategoryRepository <|.. CategoryRepository
+IProductRepository <|.. ProductRepository
+ICartRepository <|.. CartRepository
+ICartItemRepository <|.. CartItemRepository
+IOrderRepository <|.. OrderRepository
+IPaymentRepository <|.. PaymentRepository
+ICancellationRepository <|.. CancellationRepository
+IRefundRepository <|.. RefundRepository
+IFeedbackRepository <|.. FeedbackRepository
+
+UnitOfWork *-- ApplicationDbContext
+CustomerRepository *-- ApplicationDbContext
+AddressRepository *-- ApplicationDbContext
+CategoryRepository *-- ApplicationDbContext
+ProductRepository *-- ApplicationDbContext
+CartRepository *-- ApplicationDbContext
+CartItemRepository *-- ApplicationDbContext
+OrderRepository *-- ApplicationDbContext
+PaymentRepository *-- ApplicationDbContext
+CancellationRepository *-- ApplicationDbContext
+RefundRepository *-- ApplicationDbContext
+FeedbackRepository *-- ApplicationDbContext
+
+CustomersController ..> ClaimsPrincipalExtensions
+AddressesController ..> ClaimsPrincipalExtensions
+CartsController ..> ClaimsPrincipalExtensions
+
+note bottom of OrdersController
+  Several controllers inject concrete services directly.
+  Program.cs still registers the matching service interfaces.
+end note
+
+@enduml
